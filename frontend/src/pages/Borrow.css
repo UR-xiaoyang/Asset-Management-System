@@ -1,0 +1,267 @@
+/* 移动端页面容器 */
+.mobile-page-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f0f2f5;
+  padding: 16px;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 加载状态 */
+.mobile-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  color: #666;
+}
+
+/* 结果页面 */
+.mobile-result {
+  margin-top: 20vh;
+}
+
+/* 成功卡片 */
+.mobile-success-card {
+  background: white;
+  border-radius: 16px;
+  padding: 32px 24px;
+  margin-top: 20vh;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #52c41a;
+  color: white;
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.mobile-success-card h2 {
+  font-size: 20px;
+  margin: 0 0 12px;
+  color: #333;
+}
+
+.success-desc {
+  color: #666;
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.success-info {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.success-info .info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.success-info .info-row:last-child {
+  border-bottom: none;
+}
+
+.success-info .label {
+  color: #999;
+  font-size: 14px;
+}
+
+.success-info .value {
+  color: #333;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.success-tip {
+  color: #999;
+  font-size: 12px;
+  margin: 0 0 20px;
+}
+
+/* 资产信息卡片 */
+.mobile-asset-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.asset-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.asset-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.quantity-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.quantity-badge.available {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.quantity-badge.unavailable {
+  background: #fff1f0;
+  color: #f5222d;
+}
+
+.asset-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+}
+
+.detail-label {
+  width: 60px;
+  color: #999;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  flex: 1;
+  color: #333;
+  font-size: 14px;
+}
+
+/* 表单卡片 */
+.mobile-form-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-form-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 20px;
+  color: #333;
+}
+
+/* Ant Design 移动端优化 */
+.mobile-page-container .ant-form-item-label > label {
+  font-size: 14px;
+  color: #333;
+}
+
+.mobile-page-container .ant-input,
+.mobile-page-container .ant-input-number {
+  font-size: 16px !important; /* 防止iOS自动缩放 */
+  border-radius: 8px;
+}
+
+.mobile-page-container .ant-input-textarea textarea {
+  font-size: 16px !important;
+}
+
+.mobile-page-container .ant-btn-lg {
+  height: 48px;
+  font-size: 16px;
+  border-radius: 24px;
+}
+
+/* 底部提示 */
+.mobile-tip {
+  text-align: center;
+  margin-top: 16px;
+  color: #999;
+  font-size: 12px;
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .mobile-page-container {
+    background: #1a1a2e;
+  }
+
+  .mobile-asset-card,
+  .mobile-form-card {
+    background: #16213e;
+  }
+
+  .asset-header h2,
+  .mobile-form-card h3,
+  .detail-value {
+    color: #fff;
+  }
+
+  .quantity-badge.available {
+    background: rgba(24, 144, 255, 0.2);
+  }
+
+  .quantity-badge.unavailable {
+    background: rgba(245, 34, 45, 0.2);
+  }
+
+  .success-info {
+    background: #0f1624;
+  }
+
+  .success-info .info-row {
+    border-bottom-color: #333;
+  }
+
+  .success-info .label {
+    color: #888;
+  }
+
+  .success-info .value {
+    color: #fff;
+  }
+}
+
+/* 超小屏幕优化 */
+@media (max-width: 360px) {
+  .mobile-page-container {
+    padding: 12px;
+  }
+
+  .mobile-asset-card,
+  .mobile-form-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .asset-header h2 {
+    font-size: 16px;
+  }
+}

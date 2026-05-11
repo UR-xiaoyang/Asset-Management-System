@@ -1,0 +1,398 @@
+/* ========================================
+   MobileScan 扫码页面样式
+   ======================================== */
+
+.mobile-scan-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 顶部状态栏 */
+.scan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 10;
+}
+
+.scan-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+}
+
+.icon-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:active {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(0.95);
+}
+
+/* 扫码区域 */
+.scan-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+}
+
+.qr-reader {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* 隐藏html5-qrcode的默认样式 */
+.qr-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+.qr-reader img {
+  display: none !important;
+}
+
+/* 隐藏 html5-qrcode 的默认按钮 */
+.qr-reader #qr-shan {
+  display: none !important;
+}
+
+/* 扫描框装饰 */
+.scan-frame {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin-top: -20px;
+}
+
+.scan-frame .corner {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-color: #667eea;
+  border-style: solid;
+  border-width: 0;
+  transition: border-color 0.3s;
+}
+
+.scan-frame .corner.tl {
+  top: 0;
+  left: 0;
+  border-top-width: 5px;
+  border-left-width: 5px;
+  border-top-left-radius: 16px;
+}
+
+.scan-frame .corner.tr {
+  top: 0;
+  right: 0;
+  border-top-width: 5px;
+  border-right-width: 5px;
+  border-top-right-radius: 16px;
+}
+
+.scan-frame .corner.bl {
+  bottom: 0;
+  left: 0;
+  border-bottom-width: 5px;
+  border-left-width: 5px;
+  border-bottom-left-radius: 16px;
+}
+
+.scan-frame .corner.br {
+  bottom: 0;
+  right: 0;
+  border-bottom-width: 5px;
+  border-right-width: 5px;
+  border-bottom-right-radius: 16px;
+}
+
+/* 扫描中动画 */
+.scan-frame.scanning .corner {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    border-color: #667eea;
+  }
+  50% {
+    opacity: 0.5;
+    border-color: #8fa0ff;
+  }
+}
+
+/* 成功状态 */
+.scan-frame.success .corner {
+  border-color: #52c41a;
+  animation: none;
+}
+
+/* 错误状态 */
+.scan-frame.error .corner {
+  border-color: #ff4d4f;
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+/* 状态指示器 */
+.status-badge {
+  margin-top: 24px;
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-size: 15px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s;
+}
+
+.status-badge.scanning {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.status-badge.success {
+  background: #52c41a;
+  color: white;
+  animation: scaleIn 0.3s;
+}
+
+.status-badge.error {
+  background: #ff4d4f;
+  color: white;
+  animation: shake 0.3s;
+}
+
+.status-badge.idle {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 状态消息 */
+.status-message {
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  margin: 0 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-message p {
+  margin: 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.asset-preview {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+.asset-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+}
+
+.asset-uuid {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: monospace;
+}
+
+/* 底部操作区 */
+.scan-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 20px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 88px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.95);
+}
+
+.action-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+}
+
+.action-btn .icon {
+  font-size: 28px;
+}
+
+.action-btn span:last-child {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 操作提示 */
+.scan-tips {
+  text-align: center;
+  padding: 0 20px 20px;
+}
+
+.scan-tips p {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ========================================
+   响应式适配
+   ======================================== */
+
+@media (max-width: 380px) {
+  .scan-frame {
+    width: 240px;
+    height: 240px;
+  }
+
+  .scan-frame .corner {
+    width: 40px;
+    height: 40px;
+  }
+
+  .qr-reader {
+    max-width: 280px;
+  }
+
+  .scan-actions {
+    gap: 12px;
+  }
+
+  .action-btn {
+    padding: 14px 18px;
+    min-width: 76px;
+  }
+
+  .action-btn .icon {
+    font-size: 24px;
+  }
+}
+
+/* 横屏模式 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-scan-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+
+  .scan-header {
+    width: 100%;
+    padding: 8px 16px;
+  }
+
+  .scan-area {
+    flex: 0 0 55%;
+    padding: 12px;
+  }
+
+  .scan-actions {
+    flex: 0 0 45%;
+    flex-direction: column;
+    justify-content: center;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .scan-tips {
+    display: none;
+  }
+}
+
+/* ========================================
+   暗色模式 (保持当前深色主题)
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  .mobile-scan-container {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  }
+}

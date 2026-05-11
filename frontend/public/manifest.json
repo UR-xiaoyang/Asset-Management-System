@@ -1,0 +1,39 @@
+{
+  "name": "实验室资产管理",
+  "short_name": "资产助手",
+  "description": "扫码借用实验室资产",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "orientation": "portrait",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "扫码借用",
+      "url": "/scan",
+      "description": "扫描资产二维码进行借用"
+    },
+    {
+      "name": "我的申请",
+      "url": "/visitor/records",
+      "description": "查看借用记录"
+    }
+  ]
+}
