@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -17,11 +18,20 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-var JWTSecret = []byte("lab-asset-manager-jwt-secret-change-in-production")
+var JWTSecret = []byte(getJWTSecret())
+
+// getJWTSecret 获取JWT密钥，优先从环境变量读取
+func getJWTSecret() string {
+	secret := os.Getenv("JWT_SECRET")
+	if secret != "" {
+		return secret
+	}
+	return "lab-asset-manager-jwt-secret-CHANGE-THIS-IN-PRODUCTION-32bytes!"
+}
 
 // GenerateToken 生成 JWT token
 func GenerateToken(userID uint, username, role string) (string, time.Time, error) {
-	expireAt := time.Now().Add(24 * time.Hour * 7)
+	expireAt := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,

@@ -135,10 +135,10 @@ export const borrowAPI = {
   myRecords: (borrowerName: string) => api.get<{ records: BorrowRecord[] }>('/borrows/my-records', { params: { borrower_name: borrowerName } }),
   get: (id: number) => api.get<BorrowRecord>(`/borrows/${id}`),
   create: (data: Partial<BorrowRecord>) => api.post<BorrowRecord>('/borrows', data),
-  approve: (id: number, approvedBy: string) =>
-    api.post(`/borrows/${id}/approve`, {}, { headers: { 'X-Approver': approvedBy } }),
-  reject: (id: number, approvedBy: string, reason: string) =>
-    api.post(`/borrows/${id}/reject`, { approved_by: approvedBy, reject_reason: reason }),
+  approve: (id: number) =>
+    api.post(`/borrows/${id}/approve`),
+  reject: (id: number, reason: string) =>
+    api.post(`/borrows/${id}/reject`, { reject_reason: reason }),
   return: (id: number) => api.post(`/borrows/${id}/return`),
   delete: (id: number) => api.delete(`/borrows/${id}`),
   syncOffline: (data: { asset_uuid: string; borrower_name: string; borrower_phone: string; quantity: number; record_time: string }) =>
@@ -175,10 +175,11 @@ export const consumptionAPI = {
   create: (data: { asset_uuid: string; reporter_name: string; reporter_email?: string; project_name: string; quantity: number; consume_date?: string; remark?: string }) =>
     api.post<Consumption>('/consumptions', data),
   approve: (id: number) => api.post(`/consumptions/${id}/approve`),
-  reject: (id: number, approvedBy: string, reason: string) =>
-    api.post(`/consumptions/${id}/reject`, { approved_by: approvedBy, reject_reason: reason }),
+  reject: (id: number, reason: string) =>
+    api.post(`/consumptions/${id}/reject`, { reject_reason: reason }),
   complete: (id: number, data: { actual_quantity: number; project_record: string; remark?: string }) =>
     api.post(`/consumptions/${id}/complete`, data),
+  revoke: (id: number) => api.post(`/consumptions/${id}/revoke`),
   delete: (id: number) => api.delete(`/consumptions/${id}`),
 }
 

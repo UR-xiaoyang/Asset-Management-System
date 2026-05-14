@@ -58,13 +58,13 @@ func (e *AssetValidationError) Error() string {
 }
 
 type CreateAssetReq struct {
-	Name          string `json:"name" binding:"required"`
+	Name          string `json:"name" binding:"required,max=200"`
 	CategoryID    *uint  `json:"category_id"`
-	Spec          string `json:"spec"`
+	Spec          string `json:"spec" binding:"max=200"`
 	Quantity      int    `json:"quantity"`
-	Owner         string `json:"owner"`
-	Location      string `json:"location"`
-	RegisteredBy  string `json:"registered_by"`
+	Owner         string `json:"owner" binding:"max=100"`
+	Location      string `json:"location" binding:"max=200"`
+	RegisteredBy  string `json:"registered_by" binding:"max=100"`
 	RegisteredAt  string `json:"registered_at"`
 }
 
@@ -75,6 +75,11 @@ func (s *AssetService) Create(req *CreateAssetReq) (*model.Asset, error) {
 	req.Owner = sanitizeInput(req.Owner)
 	req.Location = sanitizeInput(req.Location)
 	req.RegisteredBy = sanitizeInput(req.RegisteredBy)
+
+	// 验证字段长度，防止 DoS
+	if len(req.Name) > 200 || len(req.Spec) > 200 || len(req.Owner) > 100 || len(req.Location) > 200 {
+		return nil, &AssetValidationError{Field: "input", Message: "输入字段长度超出限制"}
+	}
 
 	// 验证字段
 	if err := validateAssetFields(req.Name, req.Spec); err != nil {
@@ -127,7 +132,7 @@ func (s *AssetService) GetByUUID(uuid string) (*model.Asset, error) {
 type ListAssetsReq struct {
 	Page       int    `form:"page"`
 	PageSize   int    `form:"page_size" binding:"max=100"`
-	Keyword    string `form:"keyword"`
+	Keyword    string `form:"keyword" binding:"max=100"`
 	CategoryID *uint  `form:"category_id"`
 	Status     string `form:"status"`
 }
@@ -177,13 +182,13 @@ func (s *AssetService) List(req *ListAssetsReq) (*ListAssetsResp, error) {
 }
 
 type UpdateAssetReq struct {
-	Name         string `json:"name"`
+	Name         string `json:"name" binding:"max=200"`
 	CategoryID  *uint  `json:"category_id"`
-	Spec        string `json:"spec"`
+	Spec        string `json:"spec" binding:"max=200"`
 	Quantity    int    `json:"quantity"`
-	Owner       string `json:"owner"`
-	Location    string `json:"location"`
-	RegisteredBy string `json:"registered_by"`
+	Owner       string `json:"owner" binding:"max=100"`
+	Location    string `json:"location" binding:"max=200"`
+	RegisteredBy string `json:"registered_by" binding:"max=100"`
 }
 
 func (s *AssetService) Update(id uint, req *UpdateAssetReq) (*model.Asset, error) {

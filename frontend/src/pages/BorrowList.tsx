@@ -49,7 +49,7 @@ export default function BorrowList() {
 
   const handleApprove = async (record: BorrowRecord) => {
     try {
-      await borrowAPI.approve(record.id, user?.username || 'admin')
+      await borrowAPI.approve(record.id)
       antMessage.success('审批通过')
       loadRecords()
     } catch (error) {
@@ -65,7 +65,7 @@ export default function BorrowList() {
     // 返回 Promise，resolve(true) 表示成功关闭，resolve(false) 或 reject 表示保持打开
     return (async () => {
       try {
-        await borrowAPI.reject(selectedRecord.id, user?.username || 'admin', rejectReason)
+        await borrowAPI.reject(selectedRecord.id, rejectReason)
         antMessage.success('已拒绝')
         setRejectModalVisible(false)
         setRejectReason('')

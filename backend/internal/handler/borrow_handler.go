@@ -83,12 +83,31 @@ func (h *BorrowHandler) GetPending(c *gin.Context) {
 
 // GetMyRecords 获取我的借用记录
 func (h *BorrowHandler) GetMyRecords(c *gin.Context) {
-	borrowerName := c.Query("borrower_name")
-	if borrowerName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "borrower_name is required"})
+	// 从 JWT token 获取当前用户名，防止通过 borrower_name 参数越权访问
+	currentUsername, exists := c.Get("username")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "未登录"})
 		return
 	}
-	records, err := h.svc.GetMyRecords(borrowerName)
+
+	// 如果是访客，只能查看自己的记录；管理员可以看到所有
+	role, _ := c.Get("role")
+	var records interface{}
+	var err error
+
+	if role == "super_admin" || role == "admin" {
+		// 管理员可以按 borrower_name 查询任意用户
+		borrowerName := c.Query("borrower_name")
+		if borrowerName != "" {
+			records, err = h.svc.GetMyRecords(borrowerName)
+		} else {
+			records, err = h.svc.GetMyRecords(currentUsername.(string))
+		}
+	} else {
+		// 访客只能查看自己的记录
+		records, err = h.svc.GetMyRecords(currentUsername.(string))
+	}
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -104,13 +123,13 @@ func (h *BorrowHandler) Approve(c *gin.Context) {
 		return
 	}
 
-	// 从请求中获取审批人（实际应该从session/jwt中获取）
-	approvedBy := c.GetHeader("X-Approver")
-	if approvedBy == "" {
-		approvedBy = "admin"
+	// 从 JWT token 中获取审批人信息，禁止从请求头读取
+	approvedBy, _ := c.Get("username")
+	if approvedBy == nil {
+		approvedBy = "unknown"
 	}
 
-	if err := h.svc.Approve(uint(id), approvedBy); err != nil {
+	if err := h.svc.Approve(uint(id), approvedBy.(string)); err != nil {
 		if _, ok := err.(*service.ValidationError); ok {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -129,13 +148,26 @@ func (h *BorrowHandler) Reject(c *gin.Context) {
 		return
 	}
 
-	var req service.RejectReq
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var reqBody struct {
+		RejectReason string `json:"reject_reason" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&reqBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.svc.Reject(uint(id), &req); err != nil {
+	// 从 JWT token 获取审批人，禁止从请求体读取 approved_by
+	approvedBy, _ := c.Get("username")
+	if approvedBy == nil {
+		approvedBy = "unknown"
+	}
+
+	req := &service.RejectReq{
+		ApprovedBy:   approvedBy.(string),
+		RejectReason: reqBody.RejectReason,
+	}
+
+	if err := h.svc.Reject(uint(id), req); err != nil {
 		if _, ok := err.(*service.ValidationError); ok {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return

@@ -66,7 +66,7 @@ export default function OA() {
   const handleApprove = async (record: BorrowRecord | Consumption) => {
     try {
       if (activeTab === 'borrow') {
-        await borrowAPI.approve(record.id, user?.username || 'admin')
+        await borrowAPI.approve(record.id)
         antMessage.success('审批通过')
       } else {
         await consumptionAPI.approve(record.id)
@@ -86,9 +86,9 @@ export default function OA() {
     return (async () => {
       try {
         if (activeTab === 'borrow') {
-          await borrowAPI.reject(selectedRecord.id, user?.username || 'admin', rejectReason)
+          await borrowAPI.reject(selectedRecord.id, rejectReason)
         } else {
-          await consumptionAPI.reject(selectedRecord.id, user?.username || 'admin', rejectReason)
+          await consumptionAPI.reject(selectedRecord.id, rejectReason)
         }
         antMessage.success('已拒绝')
         setRejectModalVisible(false)

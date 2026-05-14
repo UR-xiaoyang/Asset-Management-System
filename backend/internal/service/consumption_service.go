@@ -176,3 +176,22 @@ func (s *ConsumptionService) GetByReporterName(name string) ([]model.Consumption
 func (s *ConsumptionService) Delete(id uint) error {
 	return s.repo.Delete(id)
 }
+
+func (s *ConsumptionService) Revoke(id uint) error {
+	consumption, err := s.repo.GetByID(id)
+	if err != nil {
+		return err
+	}
+
+	if consumption.Status != model.ConsumptionStatusApproved && consumption.Status != model.ConsumptionStatusCompleted {
+		return ErrInvalidStatus
+	}
+
+	consumption.Status = model.ConsumptionStatusPending
+	consumption.ApprovedBy = ""
+	consumption.ApprovedAt = nil
+	consumption.ActualQuantity = 0
+	consumption.ProjectRecord = ""
+
+	return s.repo.Update(consumption)
+}

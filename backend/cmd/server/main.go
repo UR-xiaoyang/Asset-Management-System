@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"lab-asset-manager/internal/handler"
 	"lab-asset-manager/internal/middleware"
@@ -65,6 +66,17 @@ func main() {
 		c.Next()
 	})
 
+	// 安全头部中间件
+	r.Use(func(c *gin.Context) {
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Frame-Options", "DENY")
+		c.Header("X-XSS-Protection", "1; mode=block")
+		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'")
+		c.Header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		c.Next()
+	})
+
 	// 健康检查（公开）
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -73,9 +85,11 @@ func main() {
 	// API路由
 	api := r.Group("/api/v1")
 
-	// 公开路由（无需认证）
+	// 公开路由（无需认证，带限流）
 	authHandler := handler.NewAuthHandler()
-	authHandler.RegisterPublicRoutes(api)
+	authPublic := api.Group("")
+	authPublic.Use(middleware.RateLimitMiddleware(10, time.Minute)) // 每分钟最多10次尝试
+	authHandler.RegisterPublicRoutes(authPublic)
 
 	// 需要认证的路由组
 	apiAuth := api.Group("")

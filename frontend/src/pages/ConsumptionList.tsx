@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Table, Button, Card, Space, Modal, Form, Input, InputNumber, Select, App } from 'antd'
-import { PlusOutlined, CheckOutlined, CloseOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons'
+import { PlusOutlined, CheckOutlined, CloseOutlined, EditOutlined, ReloadOutlined, UndoOutlined } from '@ant-design/icons'
 import { consumptionAPI, assetAPI } from '../services/api'
 import type { Consumption, Asset } from '../services/api'
 import { useAuthStore } from '../store/auth'
@@ -65,7 +65,7 @@ export default function ConsumptionList() {
     }
     return (async () => {
       try {
-        await consumptionAPI.reject(selectedRecord.id, user?.username || 'admin', rejectReason)
+        await consumptionAPI.reject(selectedRecord.id, rejectReason)
         antMessage.success('已拒绝')
         setRejectModalVisible(false)
         setRejectReason('')
@@ -95,6 +95,16 @@ export default function ConsumptionList() {
       antMessage.error(error.response?.data?.error || '操作失败')
     } finally {
       setSubmitLoading(false)
+    }
+  }
+
+  const handleRevoke = async (record: Consumption) => {
+    try {
+      await consumptionAPI.revoke(record.id)
+      antMessage.success('已撤销')
+      loadRecords()
+    } catch (error: any) {
+      antMessage.error(error.response?.data?.error || '操作失败')
     }
   }
 
@@ -235,11 +245,21 @@ export default function ConsumptionList() {
             </>
           )}
           {record.status === 'approved' && (
-            <Button size="small" type="primary" icon={<EditOutlined />} onClick={() => {
-              setSelectedRecord(record)
-              setCompleteModalVisible(true)
-            }}>
-              登记用量
+            <>
+              <Button size="small" type="primary" icon={<EditOutlined />} onClick={() => {
+                setSelectedRecord(record)
+                setCompleteModalVisible(true)
+              }}>
+                登记用量
+              </Button>
+              <Button size="small" icon={<UndoOutlined />} onClick={() => handleRevoke(record)}>
+                撤销
+              </Button>
+            </>
+          )}
+          {record.status === 'completed' && (
+            <Button size="small" danger icon={<UndoOutlined />} onClick={() => handleRevoke(record)}>
+              撤销
             </Button>
           )}
         </Space>

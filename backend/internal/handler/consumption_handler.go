@@ -80,12 +80,15 @@ func (h *ConsumptionHandler) Approve(c *gin.Context) {
 		return
 	}
 
-	var req service.ApproveConsumptionReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		req.ApprovedBy = "admin"
+	// 从 JWT token 获取审批人，禁止从请求体读取
+	approvedBy, exists := c.Get("username")
+	if !exists {
+		approvedBy = "unknown"
 	}
 
-	if err := h.svc.Approve(uint(id), &req); err != nil {
+	req := &service.ApproveConsumptionReq{ApprovedBy: approvedBy.(string)}
+
+	if err := h.svc.Approve(uint(id), req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -99,13 +102,26 @@ func (h *ConsumptionHandler) Reject(c *gin.Context) {
 		return
 	}
 
-	var req service.RejectConsumptionReq
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var reqBody struct {
+		RejectReason string `json:"reject_reason" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&reqBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.svc.Reject(uint(id), &req); err != nil {
+	// 从 JWT token 获取审批人信息
+	approvedBy, _ := c.Get("username")
+	if approvedBy == nil {
+		approvedBy = "unknown"
+	}
+
+	req := &service.RejectConsumptionReq{
+		ApprovedBy:   approvedBy.(string),
+		RejectReason: reqBody.RejectReason,
+	}
+
+	if err := h.svc.Reject(uint(id), req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -161,6 +177,20 @@ func (h *ConsumptionHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "deleted"})
 }
 
+func (h *ConsumptionHandler) Revoke(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := h.svc.Revoke(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "revoked"})
+}
+
 func (h *ConsumptionHandler) RegisterRoutes(r *gin.RouterGroup) {
 	consumptions := r.Group("/consumptions")
 	{
@@ -172,6 +202,7 @@ func (h *ConsumptionHandler) RegisterRoutes(r *gin.RouterGroup) {
 		consumptions.POST("/:id/approve", h.Approve)
 		consumptions.POST("/:id/reject", h.Reject)
 		consumptions.POST("/:id/complete", h.Complete)
+		consumptions.POST("/:id/revoke", h.Revoke)
 		consumptions.DELETE("/:id", h.Delete)
 	}
 }
