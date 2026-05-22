@@ -3,7 +3,6 @@ import { Table, Button, Card, Space, Modal, Form, Input, InputNumber, Select, Ap
 import { PlusOutlined, CheckOutlined, CloseOutlined, UndoOutlined, ReloadOutlined } from '@ant-design/icons'
 import { borrowAPI, assetAPI } from '../services/api'
 import type { BorrowRecord, Asset } from '../services/api'
-import { useAuthStore } from '../store/auth'
 
 const statusOptions = [
   { value: '', label: '全部' },
@@ -27,7 +26,6 @@ export default function BorrowList() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [submitLoading, setSubmitLoading] = useState(false)
   const [form] = Form.useForm()
-  const user = useAuthStore((state) => state.user)
   const { message: antMessage } = App.useApp()
 
   useEffect(() => {

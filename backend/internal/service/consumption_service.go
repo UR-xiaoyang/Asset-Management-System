@@ -190,8 +190,23 @@ func (s *ConsumptionService) Revoke(id uint) error {
 	consumption.Status = model.ConsumptionStatusPending
 	consumption.ApprovedBy = ""
 	consumption.ApprovedAt = nil
-	consumption.ActualQuantity = 0
+	consumption.ConsumeDate = time.Time{}
 	consumption.ProjectRecord = ""
 
 	return s.repo.Update(consumption)
+}
+
+type ExportConsumptionReq struct {
+	Status       string `form:"status"`
+	ReporterName string `form:"reporter_name"`
+}
+
+func (s *ConsumptionService) ListForExport(req *ExportConsumptionReq) ([]model.Consumption, error) {
+	_, _, err := s.repo.GetAll(1, 100000, req.Status, req.ReporterName)
+	if err != nil {
+		return nil, err
+	}
+	// 获取所有匹配的记录
+	items, _, err := s.repo.GetAll(1, 10000, req.Status, req.ReporterName)
+	return items, err
 }

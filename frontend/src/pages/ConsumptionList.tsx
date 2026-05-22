@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Table, Button, Card, Space, Modal, Form, Input, InputNumber, Select, App } from 'antd'
-import { PlusOutlined, CheckOutlined, CloseOutlined, EditOutlined, ReloadOutlined, UndoOutlined } from '@ant-design/icons'
+import { PlusOutlined, CheckOutlined, CloseOutlined, EditOutlined, ReloadOutlined, UndoOutlined, DownloadOutlined } from '@ant-design/icons'
 import { consumptionAPI, assetAPI } from '../services/api'
 import type { Consumption, Asset } from '../services/api'
-import { useAuthStore } from '../store/auth'
 
 const statusOptions = [
   { value: '', label: '全部' },
@@ -28,7 +27,6 @@ export default function ConsumptionList() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [submitLoading, setSubmitLoading] = useState(false)
   const [form] = Form.useForm()
-  const user = useAuthStore((state) => state.user)
   const { message: antMessage } = App.useApp()
 
   useEffect(() => {
@@ -105,6 +103,27 @@ export default function ConsumptionList() {
       loadRecords()
     } catch (error: any) {
       antMessage.error(error.response?.data?.error || '操作失败')
+    }
+  }
+
+  const [exportLoading, setExportLoading] = useState(false)
+  const handleExport = async (format: 'xlsx' | 'csv') => {
+    setExportLoading(true)
+    try {
+      const result = await consumptionAPI.export({ status, format })
+      const url = URL.createObjectURL(result.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = result.filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      antMessage.success('导出成功')
+    } catch (error) {
+      antMessage.error('导出失败')
+    } finally {
+      setExportLoading(false)
     }
   }
 
@@ -284,6 +303,14 @@ export default function ConsumptionList() {
             style={{ width: 120 }}
             className="status-select"
           />
+          <Button
+            id="consumption-list-export-btn"
+            icon={<DownloadOutlined />}
+            loading={exportLoading}
+            onClick={() => handleExport('xlsx')}
+          >
+            导出 Excel
+          </Button>
           <Button id="consumption-list-add-btn" type="primary" icon={<PlusOutlined />} onClick={openCreateModal} className="add-btn">
             代申请损耗
           </Button>

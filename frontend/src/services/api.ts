@@ -125,6 +125,29 @@ export const assetAPI = {
     api.put<{ message: string; affected: number }>('/assets/batch', data),
   deleteBatch: (ids: number[]) =>
     api.post<{ message: string; affected: number }>('/assets/batch/delete', { ids }),
+  export: (params?: { keyword?: string; category_id?: number; format?: string }) => {
+    const token = useAuthStore.getState().token
+    const queryParams = new URLSearchParams()
+    if (params?.keyword) queryParams.set('keyword', params.keyword)
+    if (params?.category_id) queryParams.set('category_id', String(params.category_id))
+    if (params?.format) queryParams.set('format', params.format)
+
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : ''
+    return fetch(`${API_BASE}/assets/export${query}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(res => {
+      if (!res.ok) throw new Error('导出失败')
+      const contentType = res.headers.get('content-type') || ''
+      const ext = contentType.includes('csv') ? 'csv' : 'xlsx'
+      const disposition = res.headers.get('content-disposition') || ''
+      let filename = `资产导出_${new Date().toISOString().slice(0, 10)}.${ext}`
+      const match = disposition.match(/filename\*?=['"]?(?:UTF-8'')?([^;\n"']+)/i)
+      if (match) {
+        filename = decodeURIComponent(match[1])
+      }
+      return res.blob().then(blob => ({ data: blob, filename }))
+    })
+  },
 }
 
 // 借用记录
@@ -181,6 +204,30 @@ export const consumptionAPI = {
     api.post(`/consumptions/${id}/complete`, data),
   revoke: (id: number) => api.post(`/consumptions/${id}/revoke`),
   delete: (id: number) => api.delete(`/consumptions/${id}`),
+  export: (params?: { status?: string; reporter_name?: string; format?: string }) => {
+    const token = useAuthStore.getState().token
+    const queryParams = new URLSearchParams()
+    if (params?.status) queryParams.set('status', params.status)
+    if (params?.reporter_name) queryParams.set('reporter_name', params.reporter_name)
+    if (params?.format) queryParams.set('format', params.format)
+
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : ''
+    // 使用 fetch 直接下载文件
+    return fetch(`${API_BASE}/consumptions/export${query}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(res => {
+      if (!res.ok) throw new Error('导出失败')
+      const contentType = res.headers.get('content-type') || ''
+      const ext = contentType.includes('csv') ? 'csv' : 'xlsx'
+      const disposition = res.headers.get('content-disposition') || ''
+      let filename = `耗材导出_${new Date().toISOString().slice(0, 10)}.${ext}`
+      const match = disposition.match(/filename\*?=['"]?(?:UTF-8'')?([^;\n"']+)/i)
+      if (match) {
+        filename = decodeURIComponent(match[1])
+      }
+      return res.blob().then(blob => ({ data: blob, filename }))
+    })
+  },
 }
 
 // 二维码

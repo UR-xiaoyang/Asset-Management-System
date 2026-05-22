@@ -181,6 +181,21 @@ func (s *AssetService) List(req *ListAssetsReq) (*ListAssetsResp, error) {
 	}, nil
 }
 
+// ListAll 获取所有资产（用于导出）
+func (s *AssetService) ListAll(keyword string, categoryID uint) ([]model.Asset, error) {
+	// 获取较大的分页来获取所有数据
+	var catPtr *uint
+	if categoryID > 0 {
+		catPtr = &categoryID
+	}
+	_, total, err := s.repo.GetAll(1, 1, keyword, catPtr, "")
+	if err != nil {
+		return nil, err
+	}
+	assets, _, err := s.repo.GetAll(1, int(total), keyword, catPtr, "")
+	return assets, err
+}
+
 type UpdateAssetReq struct {
 	Name         string `json:"name" binding:"max=200"`
 	CategoryID  *uint  `json:"category_id"`

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Table, Button, Input, Space, Tag, Popconfirm, Card, TreeSelect, Tooltip, App, Badge } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, PrinterOutlined, SearchOutlined, CloseOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, PrinterOutlined, SearchOutlined, CloseOutlined, DownloadOutlined } from '@ant-design/icons'
 import { assetAPI, categoryAPI } from '../services/api'
 import type { Asset, Category } from '../services/api'
 import ImportModal from '../components/ImportModal'
@@ -21,7 +21,28 @@ export default function AssetList() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [printModalOpen, setPrintModalOpen] = useState(false)
   const [batchEditModalOpen, setBatchEditModalOpen] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
   const { message: antMessage } = App.useApp()
+
+  const handleExport = async () => {
+    setExportLoading(true)
+    try {
+      const result = await assetAPI.export({ keyword, category_id: categoryId })
+      const url = URL.createObjectURL(result.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = result.filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      antMessage.success('导出成功')
+    } catch (error) {
+      antMessage.error('导出失败')
+    } finally {
+      setExportLoading(false)
+    }
+  }
 
   // 监听行选择变化
   const onSelectChange = (keys: React.Key[]) => {
@@ -185,6 +206,9 @@ export default function AssetList() {
         <Space>
           <Button id="asset-list-import-btn" icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>
             批量导入
+          </Button>
+          <Button id="asset-list-export-btn" icon={<DownloadOutlined />} loading={exportLoading} onClick={handleExport}>
+            导出 Excel
           </Button>
           <Button id="asset-list-add-btn" type="primary" icon={<PlusOutlined />} onClick={() => navigate('/assets/new')}>
             新增资产

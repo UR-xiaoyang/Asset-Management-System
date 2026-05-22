@@ -10,7 +10,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Build backend
-FROM golang:1.24-alpine AS backend-builder
+FROM golang:1.25-alpine AS backend-builder
 
 WORKDIR /app/backend
 
@@ -24,7 +24,7 @@ COPY backend/ ./
 RUN CGO_ENABLED=1 go build -o server ./cmd/server/
 
 # Stage 3: Runtime
-FROM alpine:3.19
+FROM alpine:3.21
 
 WORKDIR /app
 

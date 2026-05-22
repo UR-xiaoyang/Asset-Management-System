@@ -24,10 +24,9 @@ export default function Login() {
       const res = await authAPI.login(values.username, values.password)
       login(res.data.token, res.data.user)
       antMessage.success('登录成功')
-      // navigate 现在由 useEffect 处理
+      navigate('/', { replace: true })
     } catch (error: any) {
       antMessage.error(error.response?.data?.error || '登录失败')
-    } finally {
       setLoading(false)
     }
   }

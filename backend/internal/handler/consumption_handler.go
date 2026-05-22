@@ -1,10 +1,14 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
+	"lab-asset-manager/internal/model"
 	"lab-asset-manager/internal/service"
+	"lab-asset-manager/pkg/excel"
 
 	"github.com/gin-gonic/gin"
 )
@@ -191,6 +195,82 @@ func (h *ConsumptionHandler) Revoke(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "revoked"})
 }
 
+func (h *ConsumptionHandler) Export(c *gin.Context) {
+	status := c.Query("status")
+	reporterName := c.Query("reporter_name")
+	format := c.DefaultQuery("format", "xlsx")
+
+	items, err := h.svc.ListForExport(&service.ExportConsumptionReq{
+		Status:       status,
+		ReporterName: reporterName,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 转换数据
+	rows := make([]excel.ExportConsumptionRow, len(items))
+	for i, item := range items {
+		statusText := string(item.Status)
+		switch item.Status {
+		case model.ConsumptionStatusPending:
+			statusText = "待审批"
+		case model.ConsumptionStatusApproved:
+			statusText = "已批准"
+		case model.ConsumptionStatusRejected:
+			statusText = "已拒绝"
+		case model.ConsumptionStatusCompleted:
+			statusText = "已完成"
+		}
+
+		approvedAt := ""
+		if item.ApprovedAt != nil {
+			approvedAt = item.ApprovedAt.Format("2006-01-02 15:04:05")
+		}
+
+		assetName := ""
+		if item.Asset != nil {
+			assetName = item.Asset.Name
+		}
+
+		rows[i] = excel.ExportConsumptionRow{
+			ID:              int(item.ID),
+			AssetName:       assetName,
+			AssetUUID:       item.AssetUUID,
+			ReporterName:    item.ReporterName,
+			ReporterEmail:   item.ReporterEmail,
+			ProjectName:     item.ProjectName,
+			Quantity:        item.Quantity,
+			ConsumeDate:     item.ConsumeDate.Format("2006-01-02"),
+			Status:          statusText,
+			ApprovedBy:      item.ApprovedBy,
+			ApprovedAt:      approvedAt,
+			RejectReason:    item.RejectReason,
+			ActualQuantity:  item.ActualQuantity,
+			ProjectRecord:   item.ProjectRecord,
+			Remark:          item.Remark,
+			CreatedAt:       item.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+	}
+
+	// 设置文件名
+	filename := fmt.Sprintf("consumption_export_%s", time.Now().Format("20060102150405"))
+	if format == "csv" {
+		filename += ".csv"
+		c.Header("Content-Type", "text/csv; charset=utf-8")
+	} else {
+		filename += ".xlsx"
+		c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	}
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename*=UTF-8''%s", filename))
+
+	if err := excel.ExportConsumptions(c.Writer, rows, filename); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+}
+
 func (h *ConsumptionHandler) RegisterRoutes(r *gin.RouterGroup) {
 	consumptions := r.Group("/consumptions")
 	{
@@ -198,6 +278,7 @@ func (h *ConsumptionHandler) RegisterRoutes(r *gin.RouterGroup) {
 		consumptions.GET("", h.List)
 		consumptions.GET("/pending", h.GetPending)
 		consumptions.GET("/my-records", h.GetMyRecords)
+		consumptions.GET("/export", h.Export)
 		consumptions.GET("/:id", h.Get)
 		consumptions.POST("/:id/approve", h.Approve)
 		consumptions.POST("/:id/reject", h.Reject)
