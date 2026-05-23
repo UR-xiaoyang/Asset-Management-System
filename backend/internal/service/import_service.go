@@ -14,10 +14,10 @@ import (
 
 // ImportResult 导入结果
 type ImportResult struct {
-	Success   int                `json:"success"`   // 成功数量
-	Failed    int                `json:"failed"`    // 失败数量
-	Errors    []ImportRowError   `json:"errors"`    // 错误详情
-	CategoryMap map[string]uint // 分类名称->ID映射
+	Success     int              `json:"success"` // 成功数量
+	Failed      int              `json:"failed"`  // 失败数量
+	Errors      []ImportRowError `json:"errors"`  // 错误详情
+	CategoryMap map[string]uint  // 分类名称->ID映射
 }
 
 // ImportRowError 单行错误
@@ -27,15 +27,15 @@ type ImportRowError struct {
 }
 
 type ImportService struct {
-	db     *gorm.DB
-	assetRepo   *repository.AssetRepository
+	db           *gorm.DB
+	assetRepo    *repository.AssetRepository
 	categoryRepo *repository.CategoryRepository
 }
 
 func NewImportService() *ImportService {
 	return &ImportService{
-		db:     model.DB,
-		assetRepo: repository.NewAssetRepository(),
+		db:           model.DB,
+		assetRepo:    repository.NewAssetRepository(),
 		categoryRepo: repository.NewCategoryRepository(),
 	}
 }
@@ -43,7 +43,7 @@ func NewImportService() *ImportService {
 // ProcessImport 处理导入
 func (s *ImportService) ProcessImport(rows []excel.AssetRow) (*ImportResult, error) {
 	result := &ImportResult{
-		Errors: make([]ImportRowError, 0),
+		Errors:      make([]ImportRowError, 0),
 		CategoryMap: make(map[string]uint),
 	}
 

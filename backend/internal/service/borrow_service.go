@@ -9,8 +9,8 @@ import (
 )
 
 type BorrowService struct {
-	repo        *repository.BorrowRepository
-	assetRepo   *repository.AssetRepository
+	repo         *repository.BorrowRepository
+	assetRepo    *repository.AssetRepository
 	emailService *EmailService
 }
 
@@ -124,7 +124,7 @@ func (s *BorrowService) Approve(id uint, approvedBy string) error {
 }
 
 type RejectReq struct {
-	ApprovedBy  string `json:"approved_by"`
+	ApprovedBy   string `json:"approved_by"`
 	RejectReason string `json:"reject_reason" binding:"required"`
 }
 

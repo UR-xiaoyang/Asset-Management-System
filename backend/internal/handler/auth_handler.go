@@ -28,9 +28,9 @@ type LoginReq struct {
 }
 
 type LoginResp struct {
-	Token    string      `json:"token"`
-	User     model.User  `json:"user"`
-	ExpireAt time.Time   `json:"expire_at"`
+	Token    string     `json:"token"`
+	User     model.User `json:"user"`
+	ExpireAt time.Time  `json:"expire_at"`
 }
 
 // Login 登录（公开）
@@ -108,11 +108,11 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // VisitorRegister 访客注册（公开）
 func (h *AuthHandler) VisitorRegister(c *gin.Context) {
 	var req struct {
-		Username  string `json:"username" binding:"required"`
-		Name      string `json:"name" binding:"required"`
-		Phone     string `json:"phone"`
-		Email     string `json:"email"`
-		Password  string `json:"password" binding:"required"`
+		Username string `json:"username" binding:"required"`
+		Name     string `json:"name" binding:"required"`
+		Phone    string `json:"phone"`
+		Email    string `json:"email"`
+		Password string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请填写用户名、姓名和密码"})

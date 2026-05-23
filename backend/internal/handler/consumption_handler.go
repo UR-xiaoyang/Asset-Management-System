@@ -235,22 +235,22 @@ func (h *ConsumptionHandler) Export(c *gin.Context) {
 		}
 
 		rows[i] = excel.ExportConsumptionRow{
-			ID:              int(item.ID),
-			AssetName:       assetName,
-			AssetUUID:       item.AssetUUID,
-			ReporterName:    item.ReporterName,
-			ReporterEmail:   item.ReporterEmail,
-			ProjectName:     item.ProjectName,
-			Quantity:        item.Quantity,
-			ConsumeDate:     item.ConsumeDate.Format("2006-01-02"),
-			Status:          statusText,
-			ApprovedBy:      item.ApprovedBy,
-			ApprovedAt:      approvedAt,
-			RejectReason:    item.RejectReason,
-			ActualQuantity:  item.ActualQuantity,
-			ProjectRecord:   item.ProjectRecord,
-			Remark:          item.Remark,
-			CreatedAt:       item.CreatedAt.Format("2006-01-02 15:04:05"),
+			ID:             int(item.ID),
+			AssetName:      assetName,
+			AssetUUID:      item.AssetUUID,
+			ReporterName:   item.ReporterName,
+			ReporterEmail:  item.ReporterEmail,
+			ProjectName:    item.ProjectName,
+			Quantity:       item.Quantity,
+			ConsumeDate:    item.ConsumeDate.Format("2006-01-02"),
+			Status:         statusText,
+			ApprovedBy:     item.ApprovedBy,
+			ApprovedAt:     approvedAt,
+			RejectReason:   item.RejectReason,
+			ActualQuantity: item.ActualQuantity,
+			ProjectRecord:  item.ProjectRecord,
+			Remark:         item.Remark,
+			CreatedAt:      item.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
 	}
 

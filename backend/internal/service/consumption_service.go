@@ -17,13 +17,13 @@ func NewConsumptionService() *ConsumptionService {
 }
 
 type CreateConsumptionReq struct {
-	AssetUUID    string `json:"asset_uuid" binding:"required"`
-	ReporterName string `json:"reporter_name" binding:"required"`
+	AssetUUID     string `json:"asset_uuid" binding:"required"`
+	ReporterName  string `json:"reporter_name" binding:"required"`
 	ReporterEmail string `json:"reporter_email"`
-	ProjectName  string `json:"project_name" binding:"required"`
-	Quantity     int    `json:"quantity" binding:"required,min=1"`
-	ConsumeDate  string `json:"consume_date"`
-	Remark       string `json:"remark"`
+	ProjectName   string `json:"project_name" binding:"required"`
+	Quantity      int    `json:"quantity" binding:"required,min=1"`
+	ConsumeDate   string `json:"consume_date"`
+	Remark        string `json:"remark"`
 }
 
 func (s *ConsumptionService) Create(req *CreateConsumptionReq) (*model.Consumption, error) {
@@ -145,8 +145,8 @@ func (s *ConsumptionService) Reject(id uint, req *RejectConsumptionReq) error {
 
 type CompleteConsumptionReq struct {
 	ActualQuantity int    `json:"actual_quantity" binding:"required,min=1"`
-	ProjectRecord string `json:"project_record" binding:"required"`
-	Remark        string `json:"remark"`
+	ProjectRecord  string `json:"project_record" binding:"required"`
+	Remark         string `json:"remark"`
 }
 
 func (s *ConsumptionService) Complete(id uint, req *CompleteConsumptionReq) error {

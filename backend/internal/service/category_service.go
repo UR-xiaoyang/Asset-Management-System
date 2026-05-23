@@ -16,10 +16,10 @@ func NewCategoryService() *CategoryService {
 }
 
 type CreateCategoryReq struct {
-	ParentID *uint `json:"parent_id"`
-	Name     string `json:"name"`
-	Label    string `json:"label"`
-	SortOrder int   `json:"sort_order"`
+	ParentID  *uint  `json:"parent_id"`
+	Name      string `json:"name"`
+	Label     string `json:"label"`
+	SortOrder int    `json:"sort_order"`
 }
 
 func (s *CategoryService) Create(req *CreateCategoryReq) (*model.Category, error) {

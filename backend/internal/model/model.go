@@ -26,8 +26,8 @@ type Asset struct {
 	CategoryID   *uint     `gorm:"index" json:"category_id"`
 	Spec         string    `gorm:"size:200" json:"spec"`      // 规格
 	Quantity     int       `gorm:"default:1" json:"quantity"` // 数量
-	Owner        string    `gorm:"size:100" json:"owner"`    // 所有人
-	Location     string    `gorm:"size:200" json:"location"` // 存放位置
+	Owner        string    `gorm:"size:100" json:"owner"`     // 所有人
+	Location     string    `gorm:"size:200" json:"location"`  // 存放位置
 	RegisteredBy string    `gorm:"size:100" json:"registered_by"`
 	RegisteredAt time.Time `json:"registered_at"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -41,10 +41,10 @@ type Asset struct {
 type BorrowStatus string
 
 const (
-	BorrowStatusPending   BorrowStatus = "pending"   // 待审批
-	BorrowStatusApproved  BorrowStatus = "approved"  // 已通过
-	BorrowStatusRejected   BorrowStatus = "rejected"  // 已拒绝
-	BorrowStatusReturned  BorrowStatus = "returned"  // 已归还
+	BorrowStatusPending  BorrowStatus = "pending"  // 待审批
+	BorrowStatusApproved BorrowStatus = "approved" // 已通过
+	BorrowStatusRejected BorrowStatus = "rejected" // 已拒绝
+	BorrowStatusReturned BorrowStatus = "returned" // 已归还
 )
 
 // BorrowRecord 借用记录
@@ -75,7 +75,7 @@ type UserRole string
 const (
 	RoleAdmin      UserRole = "admin"
 	RoleSuperAdmin UserRole = "super_admin"
-	RoleVisitor   UserRole = "visitor"
+	RoleVisitor    UserRole = "visitor"
 )
 
 // User 用户
@@ -108,7 +108,7 @@ type SystemSetting struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	Key       string    `gorm:"uniqueIndex;size:100;not null" json:"key"` // 设置键
 	Value     string    `gorm:"type:text" json:"value"`                   // 设置值
-	Category  string    `gorm:"size:50;default:general" json:"category"`   // 分类: general, email, system
+	Category  string    `gorm:"size:50;default:general" json:"category"`  // 分类: general, email, system
 	Label     string    `gorm:"size:200" json:"label"`                    // 显示名称
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -125,23 +125,23 @@ const (
 
 // Consumption 损耗记录（耗材使用OA流程）
 type Consumption struct {
-	ID              uint              `gorm:"primaryKey" json:"id"`
-	AssetID         uint              `gorm:"index" json:"asset_id"`
-	AssetUUID       string            `gorm:"size:36;index" json:"asset_uuid"`
-	ReporterName    string            `gorm:"size:100" json:"reporter_name"`    // 损耗上报人
-	ReporterEmail   string            `gorm:"size:200" json:"reporter_email"`   // 上报人邮箱
-	ProjectName     string            `gorm:"size:200" json:"project_name"`     // 使用项目名称
-	Quantity        int               `json:"quantity"`                         // 损耗数量
-	ConsumeDate     time.Time         `json:"consume_date"`                     // 损耗日期
-	Status          ConsumptionStatus `gorm:"size:20;default:pending" json:"status"`
-	ApprovedBy      string            `gorm:"size:100" json:"approved_by"`     // 审批人
-	ApprovedAt      *time.Time        `json:"approved_at"`                      // 审批时间
-	RejectReason    string            `gorm:"size:500" json:"reject_reason"`    // 拒绝原因
-	ActualQuantity  int               `json:"actual_quantity"`                   // 实际用量（归还时填写）
-	ProjectRecord   string            `gorm:"size:500" json:"project_record"`   // 项目用量记录（归还时填写）
-	Remark          string            `gorm:"size:500" json:"remark"`            // 备注
-	CreatedAt       time.Time         `json:"created_at"`
-	UpdatedAt       time.Time         `json:"updated_at"`
+	ID             uint              `gorm:"primaryKey" json:"id"`
+	AssetID        uint              `gorm:"index" json:"asset_id"`
+	AssetUUID      string            `gorm:"size:36;index" json:"asset_uuid"`
+	ReporterName   string            `gorm:"size:100" json:"reporter_name"`  // 损耗上报人
+	ReporterEmail  string            `gorm:"size:200" json:"reporter_email"` // 上报人邮箱
+	ProjectName    string            `gorm:"size:200" json:"project_name"`   // 使用项目名称
+	Quantity       int               `json:"quantity"`                       // 损耗数量
+	ConsumeDate    time.Time         `json:"consume_date"`                   // 损耗日期
+	Status         ConsumptionStatus `gorm:"size:20;default:pending" json:"status"`
+	ApprovedBy     string            `gorm:"size:100" json:"approved_by"`    // 审批人
+	ApprovedAt     *time.Time        `json:"approved_at"`                    // 审批时间
+	RejectReason   string            `gorm:"size:500" json:"reject_reason"`  // 拒绝原因
+	ActualQuantity int               `json:"actual_quantity"`                // 实际用量（归还时填写）
+	ProjectRecord  string            `gorm:"size:500" json:"project_record"` // 项目用量记录（归还时填写）
+	Remark         string            `gorm:"size:500" json:"remark"`         // 备注
+	CreatedAt      time.Time         `json:"created_at"`
+	UpdatedAt      time.Time         `json:"updated_at"`
 
 	// 关联
 	Asset *Asset `gorm:"foreignKey:AssetID" json:"asset,omitempty"`

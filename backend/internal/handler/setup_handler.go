@@ -67,8 +67,8 @@ func (h *SetupHandler) Init(c *gin.Context) {
 	admin := model.User{
 		Username:     req.AdminUsername,
 		PasswordHash: model.HashPassword(req.AdminPassword),
-		Email:       "admin@" + req.AdminUsername + ".local",
-		Role:        model.RoleSuperAdmin,
+		Email:        "admin@" + req.AdminUsername + ".local",
+		Role:         model.RoleSuperAdmin,
 	}
 	if err := model.DB.Create(&admin).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建管理员失败: " + err.Error()})

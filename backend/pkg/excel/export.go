@@ -13,22 +13,22 @@ import (
 
 // ExportConsumptionRow 导出损耗的行
 type ExportConsumptionRow struct {
-	ID              int
-	AssetName       string
-	AssetUUID       string
-	ReporterName    string
-	ReporterEmail   string
-	ProjectName     string
-	Quantity        int
-	ConsumeDate     string
-	Status          string
-	ApprovedBy      string
-	ApprovedAt      string
-	RejectReason    string
-	ActualQuantity  int
-	ProjectRecord   string
-	Remark          string
-	CreatedAt       string
+	ID             int
+	AssetName      string
+	AssetUUID      string
+	ReporterName   string
+	ReporterEmail  string
+	ProjectName    string
+	Quantity       int
+	ConsumeDate    string
+	Status         string
+	ApprovedBy     string
+	ApprovedAt     string
+	RejectReason   string
+	ActualQuantity int
+	ProjectRecord  string
+	Remark         string
+	CreatedAt      string
 }
 
 // ExportCSV 导出为 CSV

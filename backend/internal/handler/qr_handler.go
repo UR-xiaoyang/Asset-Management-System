@@ -38,8 +38,8 @@ func (h *QRHandler) GenerateQR(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"uuid":    asset.UUID,
-		"name":    asset.Name,
+		"uuid":      asset.UUID,
+		"name":      asset.Name,
 		"qr_base64": qrBase64,
 	})
 }
@@ -66,8 +66,8 @@ func (h *QRHandler) GenerateQRByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"uuid":     asset.UUID,
-		"name":     asset.Name,
+		"uuid":      asset.UUID,
+		"name":      asset.Name,
 		"qr_base64": qrBase64,
 	})
 }
@@ -173,15 +173,15 @@ func (h *QRHandler) GenerateBatchBarcode(c *gin.Context) {
 		}
 
 		items = append(items, gin.H{
-			"id":            asset.ID,
-			"uuid":          asset.UUID,
-			"name":          asset.Name,
-			"spec":          asset.Spec,
-			"quantity":      asset.Quantity,
-			"owner":         asset.Owner,
-			"category":      "",
+			"id":             asset.ID,
+			"uuid":           asset.UUID,
+			"name":           asset.Name,
+			"spec":           asset.Spec,
+			"quantity":       asset.Quantity,
+			"owner":          asset.Owner,
+			"category":       "",
 			"barcode_base64": barcodeBase64,
-			"location":      asset.Location,
+			"location":       asset.Location,
 		})
 	}
 

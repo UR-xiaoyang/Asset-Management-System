@@ -58,14 +58,14 @@ func (e *AssetValidationError) Error() string {
 }
 
 type CreateAssetReq struct {
-	Name          string `json:"name" binding:"required,max=200"`
-	CategoryID    *uint  `json:"category_id"`
-	Spec          string `json:"spec" binding:"max=200"`
-	Quantity      int    `json:"quantity"`
-	Owner         string `json:"owner" binding:"max=100"`
-	Location      string `json:"location" binding:"max=200"`
-	RegisteredBy  string `json:"registered_by" binding:"max=100"`
-	RegisteredAt  string `json:"registered_at"`
+	Name         string `json:"name" binding:"required,max=200"`
+	CategoryID   *uint  `json:"category_id"`
+	Spec         string `json:"spec" binding:"max=200"`
+	Quantity     int    `json:"quantity"`
+	Owner        string `json:"owner" binding:"max=100"`
+	Location     string `json:"location" binding:"max=200"`
+	RegisteredBy string `json:"registered_by" binding:"max=100"`
+	RegisteredAt string `json:"registered_at"`
 }
 
 func (s *AssetService) Create(req *CreateAssetReq) (*model.Asset, error) {
@@ -198,11 +198,11 @@ func (s *AssetService) ListAll(keyword string, categoryID uint) ([]model.Asset, 
 
 type UpdateAssetReq struct {
 	Name         string `json:"name" binding:"max=200"`
-	CategoryID  *uint  `json:"category_id"`
-	Spec        string `json:"spec" binding:"max=200"`
-	Quantity    int    `json:"quantity"`
-	Owner       string `json:"owner" binding:"max=100"`
-	Location    string `json:"location" binding:"max=200"`
+	CategoryID   *uint  `json:"category_id"`
+	Spec         string `json:"spec" binding:"max=200"`
+	Quantity     int    `json:"quantity"`
+	Owner        string `json:"owner" binding:"max=100"`
+	Location     string `json:"location" binding:"max=200"`
 	RegisteredBy string `json:"registered_by" binding:"max=100"`
 }
 
