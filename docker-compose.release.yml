@@ -2,9 +2,7 @@ name: lab-asset-manager
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${APP_IMAGE:-ghcr.io/ur-xiaoyang/asset-management-system:latest}
     container_name: lab-asset-manager
     ports:
       - "${APP_PORT:-8080}:8080"

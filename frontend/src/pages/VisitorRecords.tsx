@@ -22,10 +22,6 @@ export default function VisitorRecords() {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
 
-  useEffect(() => {
-    loadRecords()
-  }, [])
-
   const loadRecords = async () => {
     if (!user?.name) return
     setLoading(true)
@@ -40,6 +36,10 @@ export default function VisitorRecords() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadRecords()
+  }, [])
 
   const handleLogout = () => {
     logout()

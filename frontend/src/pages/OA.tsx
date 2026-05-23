@@ -38,10 +38,6 @@ export default function OA() {
   const [form] = Form.useForm()
   const { message: antMessage } = App.useApp()
 
-  useEffect(() => {
-    loadRecords()
-  }, [page, status, activeTab])
-
   const loadRecords = async () => {
     setLoading(true)
     try {
@@ -60,6 +56,10 @@ export default function OA() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadRecords()
+  }, [page, status, activeTab])
 
   const handleApprove = async (record: BorrowRecord | Consumption) => {
     try {

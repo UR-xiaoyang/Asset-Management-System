@@ -14,14 +14,13 @@ FROM golang:1.25-alpine AS backend-builder
 
 WORKDIR /app/backend
 
-# Install build dependencies for sqlite
-RUN apk add --no-cache gcc musl-dev
-
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
 COPY backend/ ./
-RUN CGO_ENABLED=1 go build -o server ./cmd/server/
+RUN rm -rf internal/web/dist && mkdir -p internal/web/dist
+COPY --from=frontend-builder /app/frontend/dist ./internal/web/dist
+RUN CGO_ENABLED=0 go build -o server ./cmd/server/
 
 # Stage 3: Runtime
 FROM alpine:3.21
@@ -34,12 +33,8 @@ RUN apk add --no-cache ca-certificates tzdata
 # Create data directory for SQLite
 RUN mkdir -p /app/data
 
-# Copy backend binary and public assets from backend builder
+# Copy backend binary. Frontend assets are embedded in the binary.
 COPY --from=backend-builder /app/backend/server ./
-COPY --from=backend-builder /app/backend/public ./public
-
-# Copy built frontend from frontend builder
-COPY --from=frontend-builder /app/frontend/dist ./public
 
 # Expose port
 EXPOSE 8080

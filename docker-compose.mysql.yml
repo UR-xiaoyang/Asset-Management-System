@@ -1,0 +1,31 @@
+services:
+  app:
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_TYPE: mysql
+      DB_DSN: ${MYSQL_USER:-lab_asset}:${MYSQL_PASSWORD:-lab_asset_pass}@tcp(mysql:3306)/${MYSQL_DATABASE:-lab_asset}?charset=utf8mb4&parseTime=True&loc=Local
+
+  mysql:
+    image: mysql:8.4
+    container_name: lab-asset-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_change_me}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-lab_asset}
+      MYSQL_USER: ${MYSQL_USER:-lab_asset}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-lab_asset_pass}
+      TZ: ${TZ:-Asia/Shanghai}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_password_change_me}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  mysql_data:

@@ -1,13 +1,18 @@
 package main
 
 import (
+	"io/fs"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"lab-asset-manager/internal/handler"
 	"lab-asset-manager/internal/middleware"
 	"lab-asset-manager/internal/model"
+	"lab-asset-manager/internal/web"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,6 +44,10 @@ func main() {
 	}
 	r.Use(func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
+		if origin == "" {
+			c.Next()
+			return
+		}
 		// 检查origin是否在白名单中
 		allowed := false
 		for _, o := range splitOrigins(allowedOrigins) {
@@ -135,11 +144,7 @@ func main() {
 		setupHandler.RegisterRoutes(apiAuth)
 	}
 
-	// 静态文件服务（前端构建产物）- SPA需要处理所有路由
-	r.Static("/static", "./public")
-	r.NoRoute(func(c *gin.Context) {
-		c.File("./public/index.html")
-	})
+	registerStaticRoutes(r)
 
 	// 启动服务器
 	port := os.Getenv("PORT")
@@ -148,7 +153,11 @@ func main() {
 	}
 
 	log.Printf("服务器启动中，端口: %s", port)
-	log.Printf("默认管理员账号: admin / admin123")
+	adminUsername := os.Getenv("ADMIN_USERNAME")
+	if adminUsername == "" {
+		adminUsername = "admin"
+	}
+	log.Printf("初始管理员账号: %s", adminUsername)
 	log.Printf("数据库路径: %s", dbPath)
 	log.Printf("访问地址: http://0.0.0.0:%s", port)
 
@@ -192,4 +201,36 @@ func trimSpace(s string) string {
 		end--
 	}
 	return s[start:end]
+}
+
+func registerStaticRoutes(r *gin.Engine) {
+	publicFS := publicFileSystem()
+	fileServer := http.FileServer(http.FS(publicFS))
+
+	r.NoRoute(func(c *gin.Context) {
+		path := strings.TrimPrefix(c.Request.URL.Path, "/")
+		if path == "" {
+			path = "index.html"
+		}
+
+		if fileExists(publicFS, path) {
+			fileServer.ServeHTTP(c.Writer, c.Request)
+			return
+		}
+
+		c.Request.URL.Path = "/index.html"
+		fileServer.ServeHTTP(c.Writer, c.Request)
+	})
+}
+
+func publicFileSystem() fs.FS {
+	if _, err := os.Stat(filepath.Join("public", "index.html")); err == nil {
+		return os.DirFS("public")
+	}
+	return web.FS()
+}
+
+func fileExists(fileSystem fs.FS, path string) bool {
+	info, err := fs.Stat(fileSystem, path)
+	return err == nil && !info.IsDir()
 }

@@ -36,6 +36,8 @@ const getAuthState = () => useAuthStore.getState()
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const initialState = getAuthState()
   const [hydrated, setHydrated] = useState(initialState.hasHydrated)
+  const token = useAuthStore((state) => state.token)
+  const user = useAuthStore((state) => state.user)
 
   useEffect(() => {
     if (!hydrated) {
@@ -62,8 +64,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return null
   }
 
-  const token = useAuthStore((state) => state.token)
-  const user = useAuthStore((state) => state.user)
   if (!token) {
     return <Navigate to="/login" replace />
   }
@@ -76,6 +76,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const VisitorRoute = ({ children }: { children: React.ReactNode }) => {
   const initialState = getAuthState()
   const [hydrated, setHydrated] = useState(initialState.hasHydrated)
+  const user = useAuthStore((state) => state.user)
+  const token = useAuthStore((state) => state.token)
 
   useEffect(() => {
     if (!hydrated) {
@@ -102,8 +104,6 @@ const VisitorRoute = ({ children }: { children: React.ReactNode }) => {
     return null
   }
 
-  const user = useAuthStore((state) => state.user)
-  const token = useAuthStore((state) => state.token)
   if (!token) {
     return <Navigate to="/visitor/login" replace />
   }

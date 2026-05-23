@@ -25,6 +25,28 @@ export default function VisitorApply() {
   const [profileForm] = Form.useForm()
   const [profileSubmitting, setProfileSubmitting] = useState(false)
 
+  const loadCategories = async () => {
+    try {
+      const res = await categoryAPI.tree()
+      setCategories(res.data)
+    } catch (error) {
+      console.error('Failed to load categories:', error)
+    }
+  }
+
+  const loadAssets = async () => {
+    setLoading(true)
+    try {
+      const res = await assetAPI.list({ page, page_size: 10, keyword: searchText, category_id: categoryId })
+      setAssets(res.data.items)
+      setTotal(res.data.total)
+    } catch (error: any) {
+      antMessage.error('加载资产列表失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     loadCategories()
   }, [])
@@ -60,28 +82,6 @@ export default function VisitorApply() {
       antMessage.error(error.response?.data?.error || '更新失败')
     } finally {
       setProfileSubmitting(false)
-    }
-  }
-
-  const loadCategories = async () => {
-    try {
-      const res = await categoryAPI.tree()
-      setCategories(res.data)
-    } catch (error) {
-      console.error('Failed to load categories:', error)
-    }
-  }
-
-  const loadAssets = async () => {
-    setLoading(true)
-    try {
-      const res = await assetAPI.list({ page, page_size: 10, keyword: searchText, category_id: categoryId })
-      setAssets(res.data.items)
-      setTotal(res.data.total)
-    } catch (error: any) {
-      antMessage.error('加载资产列表失败')
-    } finally {
-      setLoading(false)
     }
   }
 

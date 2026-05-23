@@ -17,10 +17,6 @@ export default function Dashboard() {
   const [approvedCount, setApprovedCount] = useState(0)
   const [recentBorrows, setRecentBorrows] = useState<BorrowRecord[]>([])
 
-  useEffect(() => {
-    loadStats()
-  }, [])
-
   const loadStats = async () => {
     try {
       const [assetRes, borrowRes, pendingRes] = await Promise.all([
@@ -38,6 +34,10 @@ export default function Dashboard() {
       console.error('Failed to load stats:', error)
     }
   }
+
+  useEffect(() => {
+    loadStats()
+  }, [])
 
   const getStatusTag = (status: string) => {
     const statusMap: Record<string, { color: string; text: string }> = {

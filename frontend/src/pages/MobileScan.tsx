@@ -139,7 +139,7 @@ const MobileScan: React.FC = () => {
         try {
           lastTorchState.current = !lastTorchState.current
           await track.applyConstraints({
-            // @ts-ignore - torch 是非标准属性
+          // @ts-expect-error - torch 是非标准属性
             advanced: [{ torch: lastTorchState.current }]
           })
           setTorchEnabled(lastTorchState.current)

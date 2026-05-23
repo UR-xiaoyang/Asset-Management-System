@@ -1,10 +1,15 @@
 package model
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 
-	"gorm.io/driver/sqlite"
+	glebarezsqlite "github.com/glebarez/sqlite"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -12,18 +17,42 @@ import (
 var DB *gorm.DB
 
 func InitDB(dbPath string) error {
-	// 确保目录存在
-	dir := os.Getenv("DATA_DIR")
-	if dir == "" {
-		dir = "."
+	dbType := strings.ToLower(strings.TrimSpace(os.Getenv("DB_TYPE")))
+	if dbType == "" {
+		dbType = "sqlite"
 	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
+
+	dsn := strings.TrimSpace(os.Getenv("DB_DSN"))
+	var dialector gorm.Dialector
+
+	switch dbType {
+	case "sqlite":
+		if dsn == "" {
+			dsn = dbPath
+		}
+		if dsn != ":memory:" {
+			if err := os.MkdirAll(filepath.Dir(dsn), 0755); err != nil {
+				return err
+			}
+		}
+		dialector = glebarezsqlite.Open(dsn)
+	case "mysql":
+		if dsn == "" {
+			return fmt.Errorf("DB_TYPE=mysql 时必须设置 DB_DSN")
+		}
+		dialector = mysql.Open(dsn)
+	case "postgres", "postgresql":
+		if dsn == "" {
+			return fmt.Errorf("DB_TYPE=postgres 时必须设置 DB_DSN")
+		}
+		dialector = postgres.Open(dsn)
+	default:
+		return fmt.Errorf("不支持的数据库类型: %s", dbType)
 	}
 
 	// 打开数据库
 	var err error
-	DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+	DB, err = gorm.Open(dialector, &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
@@ -43,7 +72,7 @@ func InitDB(dbPath string) error {
 		return err
 	}
 
-	log.Println("数据库初始化完成")
+	log.Printf("数据库初始化完成，类型: %s", dbType)
 	return nil
 }
 
@@ -52,19 +81,32 @@ func CreateDefaultAdmin() error {
 	var count int64
 	DB.Model(&User{}).Count(&count)
 	if count == 0 {
-		// 默认账号: admin / admin123
+		username := envOrDefault("ADMIN_USERNAME", "admin")
+		password := envOrDefault("ADMIN_PASSWORD", "admin123")
+		email := envOrDefault("ADMIN_EMAIL", "admin@example.com")
+		name := strings.TrimSpace(os.Getenv("ADMIN_NAME"))
+
 		admin := User{
-			Username:     "admin",
-			PasswordHash: HashPassword("admin123"),
-			Email:       "admin@example.com",
-			Role:        RoleSuperAdmin,
+			Username:     username,
+			PasswordHash: HashPassword(password),
+			Name:         name,
+			Email:        email,
+			Role:         RoleSuperAdmin,
 		}
 		if err := DB.Create(&admin).Error; err != nil {
 			return err
 		}
-		log.Println("默认管理员账号已创建: admin / admin123")
+		log.Printf("初始管理员账号已创建: %s", username)
 	}
 	return nil
+}
+
+func envOrDefault(key, fallback string) string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	return value
 }
 
 // 创建默认分类

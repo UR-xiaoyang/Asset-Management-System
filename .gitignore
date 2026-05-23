@@ -8,6 +8,11 @@ backend/server
 # Database
 *.db
 *.db-journal
+data/
+backups/
+
+# Local environment
+.env
 
 # Logs
 *.log

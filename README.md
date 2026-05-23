@@ -12,6 +12,128 @@
 
 ## 快速开始
 
+### Docker 部署（推荐生产环境）
+
+服务器只需要安装 Docker 和 Docker Compose。
+
+从 GitHub 拉取源码并在服务器本机构建：
+
+```bash
+git clone https://github.com/UR-xiaoyang/Asset-Management-System.git
+cd Asset-Management-System
+./deploy.sh
+```
+
+如果只想拉取已经打包好的镜像部署：
+
+```bash
+git clone https://github.com/UR-xiaoyang/Asset-Management-System.git
+cd Asset-Management-System
+./deploy.sh --pull-image
+```
+
+默认镜像地址：
+
+```text
+ghcr.io/ur-xiaoyang/asset-management-system:latest
+```
+
+首次运行会进入初始化向导，可以选择数据库并配置初始管理员：
+
+- `SQLite`：默认推荐，零配置，数据保存在 `data/lab_asset.db`
+- `MySQL`：自动启动 MySQL 容器，数据保存在 Docker volume `mysql_data`
+- `PostgreSQL`：自动启动 PostgreSQL 容器，数据保存在 Docker volume `postgres_data`
+
+启动后访问：
+- 系统地址: http://localhost:8080
+- 管理员账号: 初始化时填写的用户名和密码
+
+如需重新选择数据库或重置初始化配置：
+
+```bash
+./deploy.sh --reconfigure
+```
+
+使用预构建镜像并重新初始化：
+
+```bash
+./deploy.sh --pull-image --reconfigure
+```
+
+如果只是修改端口、域名或邮件配置，编辑 `.env` 后重新部署：
+
+```bash
+./deploy.sh
+```
+
+常用 Docker 命令：
+
+```bash
+docker compose ps
+docker compose logs -f app
+docker compose restart
+docker compose down
+```
+
+SQLite 数据库会持久化在项目根目录的 `data/` 中。备份 SQLite 数据库：
+
+```bash
+./backup.sh
+```
+
+如果通过域名访问，需要在 `.env` 中配置允许的访问来源，例如：
+
+```env
+APP_PORT=8080
+APP_IMAGE=ghcr.io/ur-xiaoyang/asset-management-system:latest
+DB_TYPE=sqlite
+ALLOWED_ORIGINS=https://assets.example.com,http://localhost:8080
+```
+
+镜像会由 GitHub Actions 自动构建并发布到 GitHub Container Registry：
+
+- 推送到 `main`：发布 `latest`、`main`、`sha-xxxxxxx` 标签
+- 推送 `v*.*.*` 标签：发布对应版本标签，例如 `v1.0.0`
+- Pull Request：只构建测试，不推送镜像
+
+### Release 单文件部署
+
+推送版本标签后，GitHub Actions 会自动创建 Release，并上传内置前端资源的单文件可执行程序：
+
+- Linux: `linux_amd64`、`linux_arm64`
+- macOS: `darwin_amd64`、`darwin_arm64`
+- Windows: `windows_amd64`、`windows_arm64`
+
+发布版本示例：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+下载对应系统的压缩包，解压后直接运行：
+
+```bash
+chmod +x asset-management-system_linux_amd64
+./asset-management-system_linux_amd64
+```
+
+默认访问地址：
+
+```text
+http://localhost:8080
+```
+
+默认数据库为当前目录下的 `data/lab_asset.db`。可以通过环境变量配置管理员和数据库：
+
+```bash
+ADMIN_USERNAME=admin \
+ADMIN_PASSWORD=your_password \
+DB_TYPE=sqlite \
+DB_PATH=./data/lab_asset.db \
+./asset-management-system_linux_amd64
+```
+
 ### 一键启动（推荐）
 
 ```bash
@@ -48,6 +170,8 @@ npm run dev
 | `./start.sh` | 一键启动后端和前端 |
 | `./stop.sh` | 停止所有服务 |
 | `./status.sh` | 查看服务状态 |
+| `./deploy.sh` | Docker 构建并后台启动 |
+| `./backup.sh` | 备份 Docker 部署的 SQLite 数据库 |
 
 ## 项目结构
 
@@ -72,6 +196,29 @@ npm run dev
 │       └── services/          # API服务
 │
 └── docs/                      # 文档
+```
+
+## CI / 合并检查
+
+项目包含 GitHub Actions 自动测试流程 `.github/workflows/ci.yml`，在 Pull Request、推送 `main` 和手动触发时运行：
+
+- 后端：`gofmt` 检查、`go test`、`go vet`、无 CGO Linux 二进制编译
+- 前端：`npm ci`、`npm run build`
+- 前端 lint：`npm run lint`
+- Docker：构建镜像，并校验 SQLite/MySQL/PostgreSQL 的 Compose 组合
+- 安全：`govulncheck`、`npm audit --audit-level=high`、Trivy 文件系统扫描
+
+本地可执行核心检查：
+
+```bash
+cd backend
+go test ./cmd/... ./internal/... ./pkg/...
+go vet ./cmd/... ./internal/... ./pkg/...
+
+cd ../frontend
+npm ci
+npm run build
+npm audit --audit-level=high --registry=https://registry.npmjs.org/
 ```
 
 ## API接口
@@ -108,9 +255,18 @@ npm run dev
 ## 环境变量
 
 ### 后端
+- `APP_PORT` - Docker 对外访问端口，默认8080
 - `PORT` - 服务器端口，默认8080
-- `DB_PATH` - 数据库路径，默认./data/lab_asset.db
+- `DB_PATH` - 数据库路径，Docker 默认 /app/data/lab_asset.db
+- `DB_TYPE` - 数据库类型，支持 sqlite、mysql、postgres
+- `DB_DSN` - 数据库连接字符串，Docker 部署通常由 compose 自动生成
+- `ALLOWED_ORIGINS` - 允许跨域访问的来源，多个用英文逗号分隔
+- `ADMIN_USERNAME` - 初始管理员用户名，仅用户表为空时生效
+- `ADMIN_PASSWORD` - 初始管理员密码，仅用户表为空时生效
+- `ADMIN_EMAIL` - 初始管理员邮箱，仅用户表为空时生效
+- `ADMIN_NAME` - 初始管理员名称，仅用户表为空时生效
 - `SMTP_HOST` - SMTP服务器地址
+- `SMTP_PORT` - SMTP端口，默认587
 - `SMTP_USER` - SMTP用户名
 - `SMTP_PASS` - SMTP密码
 - `SMTP_FROM` - 发件人地址

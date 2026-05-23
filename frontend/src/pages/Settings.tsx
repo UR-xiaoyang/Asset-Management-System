@@ -17,10 +17,6 @@ export default function Settings() {
   const [initialLoading, setInitialLoading] = useState(true)
   const { message: antMessage } = App.useApp()
 
-  useEffect(() => {
-    loadSettings()
-  }, [])
-
   const loadSettings = async () => {
     setInitialLoading(true)
     try {
@@ -44,6 +40,10 @@ export default function Settings() {
       setInitialLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
 
   const handleSystemSave = async () => {
     try {
