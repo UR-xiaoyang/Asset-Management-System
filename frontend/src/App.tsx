@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { ConfigProvider, App as AntdApp } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { lazy, Suspense, useEffect, useState } from 'react'
@@ -31,41 +31,19 @@ function PageLoader() {
   )
 }
 
-const getAuthState = () => useAuthStore.getState()
-
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const initialState = getAuthState()
-  const [hydrated, setHydrated] = useState(initialState.hasHydrated)
+  // 用 Zustand selector 订阅 hasHydrated，删除 setInterval 轮询
+  const hasHydrated = useAuthStore((state) => state.hasHydrated)
   const token = useAuthStore((state) => state.token)
   const user = useAuthStore((state) => state.user)
+  const location = useLocation()
 
-  useEffect(() => {
-    if (!hydrated) {
-      const checkHydration = () => {
-        if (getAuthState().hasHydrated) {
-          setHydrated(true)
-          return true
-        }
-        return false
-      }
-      if (!checkHydration()) {
-        const interval = setInterval(() => {
-          if (checkHydration()) {
-            setHydrated(true)
-            clearInterval(interval)
-          }
-        }, 10)
-        return () => clearInterval(interval)
-      }
-    }
-  }, [hydrated])
-
-  if (!hydrated) {
+  if (!hasHydrated) {
     return null
   }
 
   if (!token) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
   if (user?.role === 'visitor') {
     return <Navigate to="/visitor/apply" replace />
@@ -74,33 +52,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 }
 
 const VisitorRoute = ({ children }: { children: React.ReactNode }) => {
-  const initialState = getAuthState()
-  const [hydrated, setHydrated] = useState(initialState.hasHydrated)
+  // 用 Zustand selector 订阅 hasHydrated
+  const hasHydrated = useAuthStore((state) => state.hasHydrated)
   const user = useAuthStore((state) => state.user)
   const token = useAuthStore((state) => state.token)
 
-  useEffect(() => {
-    if (!hydrated) {
-      const checkHydration = () => {
-        if (getAuthState().hasHydrated) {
-          setHydrated(true)
-          return true
-        }
-        return false
-      }
-      if (!checkHydration()) {
-        const interval = setInterval(() => {
-          if (checkHydration()) {
-            setHydrated(true)
-            clearInterval(interval)
-          }
-        }, 10)
-        return () => clearInterval(interval)
-      }
-    }
-  }, [hydrated])
-
-  if (!hydrated) {
+  if (!hasHydrated) {
     return null
   }
 
@@ -111,6 +68,19 @@ const VisitorRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/" replace />
   }
   return <>{children}</>
+}
+
+// 监听 401 事件，调用 navigate（在 Router 内部）
+function AuthUnauthorizedListener() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    const handler = () => {
+      navigate('/login', { replace: true })
+    }
+    window.addEventListener('auth:unauthorized', handler)
+    return () => window.removeEventListener('auth:unauthorized', handler)
+  }, [navigate])
+  return null
 }
 
 function AppContent() {
@@ -151,7 +121,9 @@ function AppContent() {
   }
 
   return (
-    <Routes>
+    <>
+      <AuthUnauthorizedListener />
+      <Routes>
       <Route path="/setup" element={<Suspense fallback={<PageLoader />}><Setup /></Suspense>} />
       <Route path="/login" element={initialized ? <Login /> : <Navigate to="/setup" replace />} />
       <Route path="/borrow/:uuid" element={<Borrow />} />
@@ -177,6 +149,7 @@ function AppContent() {
         <Route path="settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
       </Route>
     </Routes>
+    </>
   )
 }
 

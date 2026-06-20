@@ -24,7 +24,15 @@ export default function Login() {
       const res = await authAPI.login(values.username, values.password)
       login(res.data.token, res.data.user)
       antMessage.success('登录成功')
-      navigate('/', { replace: true })
+
+      // 登录成功后，检查是否有待跳转的路径
+      const pendingPath = sessionStorage.getItem('pending_path')
+      if (pendingPath) {
+        sessionStorage.removeItem('pending_path')
+        navigate(pendingPath, { replace: true })
+      } else {
+        navigate('/', { replace: true })
+      }
     } catch (error: any) {
       antMessage.error(error.response?.data?.error || '登录失败')
       setLoading(false)

@@ -55,25 +55,21 @@ export default function BorrowList() {
     }
   }
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selectedRecord || !rejectReason) {
       antMessage.warning('请输入拒绝原因')
-      return false
+      return
     }
-    // 返回 Promise，resolve(true) 表示成功关闭，resolve(false) 或 reject 表示保持打开
-    return (async () => {
-      try {
-        await borrowAPI.reject(selectedRecord.id, rejectReason)
-        antMessage.success('已拒绝')
-        setRejectModalVisible(false)
-        setRejectReason('')
-        loadRecords()
-        return true
-      } catch (error) {
-        antMessage.error('操作失败')
-        return false
-      }
-    })()
+    try {
+      await borrowAPI.reject(selectedRecord.id, rejectReason)
+      antMessage.success('已拒绝')
+      setRejectModalVisible(false)
+      setRejectReason('')
+      loadRecords()
+    } catch (error) {
+      antMessage.error('操作失败')
+      // 失败时保持弹窗打开
+    }
   }
 
   const handleReturn = async (record: BorrowRecord) => {
@@ -125,7 +121,7 @@ export default function BorrowList() {
       loadRecords()
     } catch (error: any) {
       antMessage.error(error.response?.data?.error || '提交失败')
-      closeCreateModal()  // 失败时也关闭弹窗
+      // 失败时保持弹窗打开，不调用 closeCreateModal()
     } finally {
       setSubmitLoading(false)
     }

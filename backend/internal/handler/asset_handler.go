@@ -32,7 +32,7 @@ func (h *AssetHandler) Create(c *gin.Context) {
 
 	asset, err := h.svc.Create(&req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建资产失败"})
 		return
 	}
 	c.JSON(http.StatusCreated, asset)

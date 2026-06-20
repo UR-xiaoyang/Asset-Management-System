@@ -2,6 +2,7 @@ package repository
 
 import (
 	"lab-asset-manager/internal/model"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -55,6 +56,42 @@ func (r *ConsumptionRepository) GetPending() ([]model.Consumption, error) {
 
 func (r *ConsumptionRepository) Update(consumption *model.Consumption) error {
 	return r.db.Save(consumption).Error
+}
+
+// UpdateStatusWithCAS 状态机 CAS 更新：仅当当前 status 等于 expectedStatus 时才更新
+//   - 返回 rows affected；0 表示状态已被并发修改
+func (r *ConsumptionRepository) UpdateStatusWithCAS(id uint, expectedStatus, newStatus model.ConsumptionStatus, updates map[string]interface{}) (int64, error) {
+	if updates == nil {
+		updates = map[string]interface{}{}
+	}
+	updates["status"] = newStatus
+	res := r.db.Model(&model.Consumption{}).
+		Where("id = ? AND status = ?", id, expectedStatus).
+		Updates(updates)
+	return res.RowsAffected, res.Error
+}
+
+// Revoke 撤销已批准/已完成的损耗记录（恢复库存）
+func (r *ConsumptionRepository) Revoke(id uint, revokedBy string) (int64, error) {
+	now := time.Now()
+	// CAS：仅当 status 为 approved/completed 时才能撤销
+	res := r.db.Model(&model.Consumption{}).
+		Where("id = ? AND status IN ?", id, []model.ConsumptionStatus{
+			model.ConsumptionStatusApproved, model.ConsumptionStatusCompleted,
+		}).
+		Updates(map[string]interface{}{
+			"status":     model.ConsumptionStatusRevoked,
+			"revoked_at": &now,
+			"revoked_by": revokedBy,
+		})
+	return res.RowsAffected, res.Error
+}
+
+// UpdateFields 通用字段更新（不改变 status）
+func (r *ConsumptionRepository) UpdateFields(id uint, updates map[string]interface{}) error {
+	return r.db.Model(&model.Consumption{}).
+		Where("id = ?", id).
+		Updates(updates).Error
 }
 
 func (r *ConsumptionRepository) Delete(id uint) error {

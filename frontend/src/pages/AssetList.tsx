@@ -15,6 +15,7 @@ export default function AssetList() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [keyword, setKeyword] = useState('')
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [categoryId, setCategoryId] = useState<number | undefined>()
   const [categories, setCategories] = useState<Category[]>([])
   const [importModalOpen, setImportModalOpen] = useState(false)
@@ -53,9 +54,17 @@ export default function AssetList() {
     loadCategories()
   }, [])
 
+  // 搜索防抖：300ms 后更新 debouncedKeyword
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedKeyword(keyword)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [keyword])
+
   useEffect(() => {
     loadAssets()
-  }, [page, keyword, categoryId])
+  }, [page, debouncedKeyword, categoryId])
 
   const loadCategories = async () => {
     try {
@@ -69,7 +78,7 @@ export default function AssetList() {
   const loadAssets = async () => {
     setLoading(true)
     try {
-      const res = await assetAPI.list({ page, page_size: 10, keyword, category_id: categoryId })
+      const res = await assetAPI.list({ page, page_size: 10, keyword: debouncedKeyword, category_id: categoryId })
       setAssets(res.data.items)
       setTotal(res.data.total)
     } catch (error) {
@@ -283,13 +292,13 @@ export default function AssetList() {
             allowClear
             treeDefaultExpandAll
             value={categoryId}
-            onChange={(value) => { setCategoryId(value); setPage(1); }}
+            onChange={(value) => { setCategoryId(value); setPage(1); setSelectedRowKeys([]); }}
             fieldNames={{ label: 'name', value: 'id', children: 'children' }}
             treeData={categories}
             className="category-tree-select"
           />
           {(keyword || categoryId) && (
-            <Button id="asset-list-clear-filter-btn" type="link" onClick={() => { setKeyword(''); setCategoryId(undefined); setPage(1); }} className="clear-filter-btn">
+            <Button id="asset-list-clear-filter-btn" type="link" onClick={() => { setKeyword(''); setCategoryId(undefined); setPage(1); setSelectedRowKeys([]); }} className="clear-filter-btn">
               清除筛选
             </Button>
           )}

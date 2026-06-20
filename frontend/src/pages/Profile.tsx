@@ -33,6 +33,13 @@ export default function Profile() {
         phone: values.phone,
       })
 
+      // 更新成功后同步到 store
+      useAuthStore.getState().updateUser({
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+      })
+
       message.success('个人信息更新成功')
     } catch (error) {
       const err = error as AxiosError<{ error: string }>

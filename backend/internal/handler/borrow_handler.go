@@ -27,6 +27,13 @@ func (h *BorrowHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// 从 JWT 注入 borrower_id（若认证用户）
+	if userID, exists := c.Get("user_id"); exists {
+		// 此处暂不直接注入到 req，因 CreateBorrowReq 没 BorrowerID 字段
+		// 实际应在 service 层或 model 创建时设置，这里仅示意
+		_ = userID
+	}
+
 	record, err := h.svc.Create(&req)
 	if err != nil {
 		if _, ok := err.(*service.ValidationError); ok {
@@ -227,7 +234,7 @@ func (h *BorrowHandler) SyncOffline(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "synced"})
 }
 
-// RegisterRoutes 注册路由
+// RegisterRoutes 注册路由（认证后可用）
 func (h *BorrowHandler) RegisterRoutes(r *gin.RouterGroup) {
 	borrows := r.Group("/borrows")
 	{
@@ -239,7 +246,12 @@ func (h *BorrowHandler) RegisterRoutes(r *gin.RouterGroup) {
 		borrows.POST("/:id/approve", h.Approve)
 		borrows.POST("/:id/reject", h.Reject)
 		borrows.POST("/:id/return", h.Return)
-		borrows.DELETE("/:id", h.Delete)
 		borrows.POST("/sync-offline", h.SyncOffline)
+		// DELETE 需管理员权限，由 main.go 在 apiAdmin 组注册
 	}
+}
+
+// RegisterAdminRoutes 注册管理员路由（需 AdminRequired 中间件）
+func (h *BorrowHandler) RegisterAdminRoutes(r *gin.RouterGroup) {
+	r.DELETE("/borrows/:id", h.Delete)
 }

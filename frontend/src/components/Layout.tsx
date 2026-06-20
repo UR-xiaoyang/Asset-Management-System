@@ -18,6 +18,7 @@ const { Sider, Content } = Layout
 
 // 根据角色过滤菜单
 const getMenuItems = (role: string) => {
+  const normalizedRole = role.toLowerCase()
   const items = [
     { key: '/', icon: <DashboardOutlined />, label: '首页' },
     { key: '/assets', icon: <AppstoreOutlined />, label: '资产管理' },
@@ -26,7 +27,7 @@ const getMenuItems = (role: string) => {
   ]
 
   // 管理员和超级管理员可以看到用户管理和系统设置
-  if (role === 'admin' || role === 'super_admin') {
+  if (normalizedRole === 'admin' || normalizedRole === 'super_admin') {
     items.push({ key: '/users', icon: <TeamOutlined />, label: '用户管理' })
     items.push({ key: '/settings', icon: <SettingOutlined />, label: '系统设置' })
   }

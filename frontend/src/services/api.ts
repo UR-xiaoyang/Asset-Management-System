@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { message } from 'antd'
 import { useAuthStore } from '../store/auth'
 
 // 开发环境使用代理路径，生产环境使用环境变量
@@ -24,7 +25,11 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout()
-      window.location.href = '/login'
+      // 保存当前路径，登录后跳回
+      sessionStorage.setItem('pending_path', window.location.pathname)
+      message.warning('登录已过期，请重新登录')
+      // 触发自定义事件，由 App.tsx 监听并调用 navigate（避免在拦截器中直接调用）
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
     }
     return Promise.reject(error)
   }

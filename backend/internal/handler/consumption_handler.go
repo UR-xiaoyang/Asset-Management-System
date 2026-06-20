@@ -153,13 +153,29 @@ func (h *ConsumptionHandler) Complete(c *gin.Context) {
 }
 
 func (h *ConsumptionHandler) GetMyRecords(c *gin.Context) {
-	name := c.Query("name")
-	if name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+	// 从 JWT token 获取当前用户名，防止越权
+	username, exists := c.Get("username")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "未登录"})
 		return
 	}
 
-	items, err := h.svc.GetByReporterName(name)
+	role, _ := c.Get("role")
+	var items []model.Consumption
+	var err error
+
+	// 管理员可查询任意用户；普通用户只能查自己
+	if role == "super_admin" || role == "admin" {
+		name := c.Query("name")
+		if name != "" {
+			items, err = h.svc.GetByReporterName(name)
+		} else {
+			items, err = h.svc.GetByReporterName(username.(string))
+		}
+	} else {
+		items, err = h.svc.GetByReporterName(username.(string))
+	}
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -188,7 +204,13 @@ func (h *ConsumptionHandler) Revoke(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.Revoke(uint(id)); err != nil {
+	// 从 JWT 获取操作人
+	revokedBy, exists := c.Get("username")
+	if !exists {
+		revokedBy = "unknown"
+	}
+
+	if err := h.svc.Revoke(uint(id), revokedBy.(string)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -284,6 +306,11 @@ func (h *ConsumptionHandler) RegisterRoutes(r *gin.RouterGroup) {
 		consumptions.POST("/:id/reject", h.Reject)
 		consumptions.POST("/:id/complete", h.Complete)
 		consumptions.POST("/:id/revoke", h.Revoke)
-		consumptions.DELETE("/:id", h.Delete)
+		// DELETE 需管理员权限，由 main.go 在 apiAdmin 组注册
 	}
+}
+
+// RegisterAdminRoutes 注册管理员路由（需 AdminRequired 中间件）
+func (h *ConsumptionHandler) RegisterAdminRoutes(r *gin.RouterGroup) {
+	r.DELETE("/consumptions/:id", h.Delete)
 }

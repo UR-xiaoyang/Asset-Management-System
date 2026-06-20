@@ -19,6 +19,8 @@ const MobileScan: React.FC = () => {
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const lastTorchState = useRef(false)
+  const successTimerRef = useRef<number | null>(null)
+  const errorTimerRef = useRef<number | null>(null)
 
   // 初始化扫码器
   useEffect(() => {
@@ -70,13 +72,13 @@ const MobileScan: React.FC = () => {
               }
 
               // 2秒后跳转到借用页面
-              setTimeout(() => {
+              successTimerRef.current = window.setTimeout(() => {
                 navigate(`/borrow/${uuid}`)
               }, 2000)
             } catch {
               setScanStatus('error')
               setStatusMessage('未找到该资产，请检查二维码是否正确')
-              setTimeout(() => {
+              errorTimerRef.current = window.setTimeout(() => {
                 setScanStatus('idle')
                 setStatusMessage('将二维码放入框内即可自动扫描')
               }, 3000)
@@ -116,6 +118,18 @@ const MobileScan: React.FC = () => {
 
     return () => {
       mounted = false
+
+      // 清理 setTimeout
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+        successTimerRef.current = null
+      }
+      if (errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current)
+        errorTimerRef.current = null
+      }
+
+      // 停止扫码器
       if (scannerRef.current) {
         scannerRef.current.stop().catch(console.error)
         scannerRef.current = null

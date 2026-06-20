@@ -10,18 +10,21 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // pathTraversalRegex 检测路径遍历攻击
 var pathTraversalRegex = regexp.MustCompile(`(?i)(\.\.[/\\]|%2e%2e[/\\]|\\/|/\\)`)
 
 type AssetService struct {
-	repo *repository.AssetRepository
+	repo      *repository.AssetRepository
+	borrowRepo *repository.BorrowRepository
 }
 
 func NewAssetService() *AssetService {
 	return &AssetService{
-		repo: repository.NewAssetRepository(),
+		repo:       repository.NewAssetRepository(),
+		borrowRepo: repository.NewBorrowRepository(),
 	}
 }
 
@@ -160,10 +163,16 @@ func (s *AssetService) List(req *ListAssetsReq) (*ListAssetsResp, error) {
 		return nil, err
 	}
 
-	borrowRepo := repository.NewBorrowRepository()
+	// 用批量查询替代 N+1
+	uuids := make([]string, 0, len(assets))
+	for _, a := range assets {
+		uuids = append(uuids, a.UUID)
+	}
+	borrowedMap, _ := s.borrowRepo.GetBorrowedQuantitiesByUUIDs(uuids)
+
 	items := make([]AssetResponse, len(assets))
 	for i, asset := range assets {
-		borrowedQty, _ := borrowRepo.GetBorrowedQuantity(asset.UUID)
+		borrowedQty := borrowedMap[asset.UUID]
 		availableQty := asset.Quantity - borrowedQty
 		if availableQty < 0 {
 			availableQty = 0
@@ -207,80 +216,108 @@ type UpdateAssetReq struct {
 }
 
 func (s *AssetService) Update(id uint, req *UpdateAssetReq) (*model.Asset, error) {
-	asset, err := s.repo.GetByID(id)
+	var result *model.Asset
+	err := model.DB.Transaction(func(tx *gorm.DB) error {
+		asset, err := s.repo.GetByID(id)
+		if err != nil {
+			return err
+		}
+
+		// 清理输入
+		if req.Name != "" {
+			req.Name = sanitizeInput(req.Name)
+		}
+		if req.Spec != "" {
+			req.Spec = sanitizeInput(req.Spec)
+		}
+		if req.Owner != "" {
+			req.Owner = sanitizeInput(req.Owner)
+		}
+		if req.Location != "" {
+			req.Location = sanitizeInput(req.Location)
+		}
+		if req.RegisteredBy != "" {
+			req.RegisteredBy = sanitizeInput(req.RegisteredBy)
+		}
+
+		// 验证
+		if err := validateAssetFields(req.Name, req.Spec); err != nil {
+			return err
+		}
+
+		// 危险内容检测
+		if req.Name != "" {
+			lowerName := strings.ToLower(req.Name)
+			dangerous := []string{"<script", "<iframe", "javascript:", "onerror=", "onload="}
+			for _, p := range dangerous {
+				if strings.Contains(lowerName, p) {
+					return &AssetValidationError{Field: "name", Message: "字段包含危险内容"}
+				}
+			}
+		}
+		if req.Spec != "" {
+			lowerSpec := strings.ToLower(req.Spec)
+			for _, p := range []string{"<script", "<iframe", "javascript:", "onerror=", "onload="} {
+				if strings.Contains(lowerSpec, p) {
+					return &AssetValidationError{Field: "spec", Message: "字段包含危险内容"}
+				}
+			}
+		}
+
+		if req.Name != "" {
+			asset.Name = req.Name
+		}
+		if req.CategoryID != nil {
+			asset.CategoryID = req.CategoryID
+		}
+		if req.Spec != "" {
+			asset.Spec = req.Spec
+		}
+		if req.Quantity > 0 {
+			// 关键校验：新数量不能小于当前已借数量
+			borrowed, err := s.borrowRepo.GetBorrowedQuantity(asset.UUID)
+			if err != nil {
+				return err
+			}
+			if req.Quantity < borrowed {
+				return ErrInvalidQuantity
+			}
+			asset.Quantity = req.Quantity
+		}
+		if req.Owner != "" {
+			asset.Owner = req.Owner
+		}
+		if req.Location != "" {
+			asset.Location = req.Location
+		}
+		if req.RegisteredBy != "" {
+			asset.RegisteredBy = req.RegisteredBy
+		}
+		if err := tx.Save(asset).Error; err != nil {
+			return err
+		}
+		result = asset
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	// 清理输入
-	if req.Name != "" {
-		req.Name = sanitizeInput(req.Name)
-	}
-	if req.Spec != "" {
-		req.Spec = sanitizeInput(req.Spec)
-	}
-	if req.Owner != "" {
-		req.Owner = sanitizeInput(req.Owner)
-	}
-	if req.Location != "" {
-		req.Location = sanitizeInput(req.Location)
-	}
-	if req.RegisteredBy != "" {
-		req.RegisteredBy = sanitizeInput(req.RegisteredBy)
-	}
-
-	// 验证
-	if err := validateAssetFields(req.Name, req.Spec); err != nil {
-		return nil, err
-	}
-
-	// 危险内容检测
-	if req.Name != "" {
-		lowerName := strings.ToLower(req.Name)
-		dangerous := []string{"<script", "<iframe", "javascript:", "onerror=", "onload="}
-		for _, p := range dangerous {
-			if strings.Contains(lowerName, p) {
-				return nil, &AssetValidationError{Field: "name", Message: "字段包含危险内容"}
-			}
-		}
-	}
-	if req.Spec != "" {
-		lowerSpec := strings.ToLower(req.Spec)
-		for _, p := range []string{"<script", "<iframe", "javascript:", "onerror=", "onload="} {
-			if strings.Contains(lowerSpec, p) {
-				return nil, &AssetValidationError{Field: "spec", Message: "字段包含危险内容"}
-			}
-		}
-	}
-
-	if req.Name != "" {
-		asset.Name = req.Name
-	}
-	if req.CategoryID != nil {
-		asset.CategoryID = req.CategoryID
-	}
-	if req.Spec != "" {
-		asset.Spec = req.Spec
-	}
-	if req.Quantity > 0 {
-		asset.Quantity = req.Quantity
-	}
-	if req.Owner != "" {
-		asset.Owner = req.Owner
-	}
-	if req.Location != "" {
-		asset.Location = req.Location
-	}
-	if req.RegisteredBy != "" {
-		asset.RegisteredBy = req.RegisteredBy
-	}
-	if err := s.repo.Update(asset); err != nil {
-		return nil, err
-	}
-	return s.repo.GetByID(id)
+	return s.repo.GetByID(result.ID)
 }
 
 func (s *AssetService) Delete(id uint) error {
+	// 检查是否有未完成的借用
+	asset, err := s.repo.GetByID(id)
+	if err != nil {
+		return err
+	}
+	borrowed, err := s.borrowRepo.GetBorrowedQuantity(asset.UUID)
+	if err != nil {
+		return err
+	}
+	if borrowed > 0 {
+		return ErrAssetInUse
+	}
 	return s.repo.Delete(id)
 }
 

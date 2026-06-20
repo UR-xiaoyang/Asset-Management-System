@@ -45,10 +45,13 @@ export default function Setup() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
       })
-      const data = await res.json()
+
       if (!res.ok) {
-        throw new Error(data.error || '初始化失败')
+        const errorData = await res.json()
+        throw new Error(errorData.error || '初始化失败')
       }
+
+      await res.json()
       setInitResult({ success: true, admin_user: values.admin_username })
       setCurrentStep(2)
       message.success('系统初始化成功')

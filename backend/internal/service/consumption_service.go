@@ -4,15 +4,19 @@ import (
 	"lab-asset-manager/internal/model"
 	"lab-asset-manager/internal/repository"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type ConsumptionService struct {
-	repo *repository.ConsumptionRepository
+	repo      *repository.ConsumptionRepository
+	assetRepo *repository.AssetRepository
 }
 
 func NewConsumptionService() *ConsumptionService {
 	return &ConsumptionService{
-		repo: repository.NewConsumptionRepository(),
+		repo:      repository.NewConsumptionRepository(),
+		assetRepo: repository.NewAssetRepository(),
 	}
 }
 
@@ -27,8 +31,7 @@ type CreateConsumptionReq struct {
 }
 
 func (s *ConsumptionService) Create(req *CreateConsumptionReq) (*model.Consumption, error) {
-	assetRepo := repository.NewAssetRepository()
-	asset, err := assetRepo.GetByUUID(req.AssetUUID)
+	asset, err := s.assetRepo.GetByUUID(req.AssetUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +49,6 @@ func (s *ConsumptionService) Create(req *CreateConsumptionReq) (*model.Consumpti
 	}
 
 	if req.ConsumeDate != "" {
-		// 解析日期字符串
 		if parsedDate, err := time.Parse("2006-01-02", req.ConsumeDate); err == nil {
 			consumption.ConsumeDate = parsedDate
 		}
@@ -103,22 +105,32 @@ type ApproveConsumptionReq struct {
 	ApprovedBy string `json:"approved_by"`
 }
 
+// Approve CAS 状态切换（事务）
 func (s *ConsumptionService) Approve(id uint, req *ApproveConsumptionReq) error {
-	consumption, err := s.repo.GetByID(id)
-	if err != nil {
-		return err
-	}
-
-	if consumption.Status != model.ConsumptionStatusPending {
-		return ErrInvalidStatus
-	}
-
-	now := time.Now()
-	consumption.Status = model.ConsumptionStatusApproved
-	consumption.ApprovedBy = req.ApprovedBy
-	consumption.ApprovedAt = &now
-
-	return s.repo.Update(consumption)
+	return model.DB.Transaction(func(tx *gorm.DB) error {
+		var c model.Consumption
+		if err := tx.First(&c, id).Error; err != nil {
+			return err
+		}
+		if c.Status != model.ConsumptionStatusPending {
+			return ErrInvalidStatus
+		}
+		now := time.Now()
+		res := tx.Model(&model.Consumption{}).
+			Where("id = ? AND status = ?", id, model.ConsumptionStatusPending).
+			Updates(map[string]interface{}{
+				"status":      model.ConsumptionStatusApproved,
+				"approved_by": req.ApprovedBy,
+				"approved_at": &now,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return ErrInvalidStatus
+		}
+		return nil
+	})
 }
 
 type RejectConsumptionReq struct {
@@ -126,21 +138,31 @@ type RejectConsumptionReq struct {
 	RejectReason string `json:"reject_reason" binding:"required"`
 }
 
+// Reject CAS 状态切换（事务）
 func (s *ConsumptionService) Reject(id uint, req *RejectConsumptionReq) error {
-	consumption, err := s.repo.GetByID(id)
-	if err != nil {
-		return err
-	}
-
-	if consumption.Status != model.ConsumptionStatusPending {
-		return ErrInvalidStatus
-	}
-
-	consumption.Status = model.ConsumptionStatusRejected
-	consumption.ApprovedBy = req.ApprovedBy
-	consumption.RejectReason = req.RejectReason
-
-	return s.repo.Update(consumption)
+	return model.DB.Transaction(func(tx *gorm.DB) error {
+		var c model.Consumption
+		if err := tx.First(&c, id).Error; err != nil {
+			return err
+		}
+		if c.Status != model.ConsumptionStatusPending {
+			return ErrInvalidStatus
+		}
+		res := tx.Model(&model.Consumption{}).
+			Where("id = ? AND status = ?", id, model.ConsumptionStatusPending).
+			Updates(map[string]interface{}{
+				"status":        model.ConsumptionStatusRejected,
+				"approved_by":   req.ApprovedBy,
+				"reject_reason": req.RejectReason,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return ErrInvalidStatus
+		}
+		return nil
+	})
 }
 
 type CompleteConsumptionReq struct {
@@ -149,24 +171,42 @@ type CompleteConsumptionReq struct {
 	Remark         string `json:"remark"`
 }
 
+// Complete 完成登记实际用量：CAS approved → completed + 原子扣库存（事务）
 func (s *ConsumptionService) Complete(id uint, req *CompleteConsumptionReq) error {
-	consumption, err := s.repo.GetByID(id)
-	if err != nil {
-		return err
-	}
-
-	if consumption.Status != model.ConsumptionStatusApproved {
-		return ErrInvalidStatus
-	}
-
-	consumption.Status = model.ConsumptionStatusCompleted
-	consumption.ActualQuantity = req.ActualQuantity
-	consumption.ProjectRecord = req.ProjectRecord
-	if req.Remark != "" {
-		consumption.Remark = req.Remark
-	}
-
-	return s.repo.Update(consumption)
+	return model.DB.Transaction(func(tx *gorm.DB) error {
+		var c model.Consumption
+		if err := tx.First(&c, id).Error; err != nil {
+			return err
+		}
+		if c.Status != model.ConsumptionStatusApproved {
+			return ErrInvalidStatus
+		}
+		// 原子扣库存
+		affected, err := s.assetRepo.DecreaseQuantity(c.AssetUUID, req.ActualQuantity)
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return ErrInsufficientStock
+		}
+		now := time.Now()
+		res := tx.Model(&model.Consumption{}).
+			Where("id = ? AND status = ?", id, model.ConsumptionStatusApproved).
+			Updates(map[string]interface{}{
+				"status":          model.ConsumptionStatusCompleted,
+				"actual_quantity": req.ActualQuantity,
+				"project_record":  req.ProjectRecord,
+				"remark":          req.Remark,
+				"approved_at":     &now,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return ErrInvalidStatus
+		}
+		return nil
+	})
 }
 
 func (s *ConsumptionService) GetByReporterName(name string) ([]model.Consumption, error) {
@@ -177,23 +217,41 @@ func (s *ConsumptionService) Delete(id uint) error {
 	return s.repo.Delete(id)
 }
 
-func (s *ConsumptionService) Revoke(id uint) error {
-	consumption, err := s.repo.GetByID(id)
-	if err != nil {
-		return err
-	}
-
-	if consumption.Status != model.ConsumptionStatusApproved && consumption.Status != model.ConsumptionStatusCompleted {
-		return ErrInvalidStatus
-	}
-
-	consumption.Status = model.ConsumptionStatusPending
-	consumption.ApprovedBy = ""
-	consumption.ApprovedAt = nil
-	consumption.ConsumeDate = time.Time{}
-	consumption.ProjectRecord = ""
-
-	return s.repo.Update(consumption)
+// Revoke 撤销损耗：状态改 revoked；若原状态为 completed 则恢复库存（事务）
+func (s *ConsumptionService) Revoke(id uint, revokedBy string) error {
+	return model.DB.Transaction(func(tx *gorm.DB) error {
+		var c model.Consumption
+		if err := tx.First(&c, id).Error; err != nil {
+			return err
+		}
+		if c.Status != model.ConsumptionStatusApproved && c.Status != model.ConsumptionStatusCompleted {
+			return ErrInvalidStatus
+		}
+		// CAS：仅当原状态在允许集合内
+		now := time.Now()
+		res := tx.Model(&model.Consumption{}).
+			Where("id = ? AND status IN ?", id, []model.ConsumptionStatus{
+				model.ConsumptionStatusApproved, model.ConsumptionStatusCompleted,
+			}).
+			Updates(map[string]interface{}{
+				"status":     model.ConsumptionStatusRevoked,
+				"revoked_at": &now,
+				"revoked_by": revokedBy,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return ErrInvalidStatus
+		}
+		// 若原状态为 completed，库存已被扣减，需恢复实际用量
+		if c.Status == model.ConsumptionStatusCompleted && c.ActualQuantity > 0 {
+			if err := s.assetRepo.IncreaseQuantity(c.AssetUUID, c.ActualQuantity); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 type ExportConsumptionReq struct {
@@ -202,11 +260,9 @@ type ExportConsumptionReq struct {
 }
 
 func (s *ConsumptionService) ListForExport(req *ExportConsumptionReq) ([]model.Consumption, error) {
-	_, _, err := s.repo.GetAll(1, 100000, req.Status, req.ReporterName)
+	items, _, err := s.repo.GetAll(1, 10000, req.Status, req.ReporterName)
 	if err != nil {
 		return nil, err
 	}
-	// 获取所有匹配的记录
-	items, _, err := s.repo.GetAll(1, 10000, req.Status, req.ReporterName)
-	return items, err
+	return items, nil
 }

@@ -112,16 +112,23 @@ func (h *QRHandler) GenerateBatchQR(c *gin.Context) {
 	}
 
 	items := make([]gin.H, 0, len(req.IDs))
+	failedIDs := make([]uint, 0)
+	errors := make(map[uint]string)
+
 	for _, id := range req.IDs {
 		asset, err := h.assetSvc.GetByID(id)
 		if err != nil {
-			continue // 跳过不存在的资产
+			failedIDs = append(failedIDs, id)
+			errors[id] = "资产不存在"
+			continue
 		}
 
 		qrData := qrcode.GenerateAssetQR(asset.UUID, asset.Name, asset.Owner, asset.Quantity)
 		qrBase64, err := qrcode.GenerateQRCodeBase64(qrData)
 		if err != nil {
-			continue // 跳过生成失败的
+			failedIDs = append(failedIDs, id)
+			errors[id] = "二维码生成失败"
+			continue
 		}
 
 		items = append(items, gin.H{
@@ -137,7 +144,11 @@ func (h *QRHandler) GenerateBatchQR(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"items": items})
+	c.JSON(http.StatusOK, gin.H{
+		"items":      items,
+		"failed_ids": failedIDs,
+		"errors":     errors,
+	})
 }
 
 // GenerateBatchBarcode 批量生成条形码
@@ -161,14 +172,21 @@ func (h *QRHandler) GenerateBatchBarcode(c *gin.Context) {
 	}
 
 	items := make([]gin.H, 0, len(req.IDs))
+	failedIDs := make([]uint, 0)
+	errors := make(map[uint]string)
+
 	for _, id := range req.IDs {
 		asset, err := h.assetSvc.GetByID(id)
 		if err != nil {
+			failedIDs = append(failedIDs, id)
+			errors[id] = "资产不存在"
 			continue
 		}
 
 		barcodeBase64, err := qrcode.GenerateBarcodeBase64(asset.UUID)
 		if err != nil {
+			failedIDs = append(failedIDs, id)
+			errors[id] = "条形码生成失败"
 			continue
 		}
 
@@ -185,7 +203,11 @@ func (h *QRHandler) GenerateBatchBarcode(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"items": items})
+	c.JSON(http.StatusOK, gin.H{
+		"items":      items,
+		"failed_ids": failedIDs,
+		"errors":     errors,
+	})
 }
 
 // RegisterRoutes 注册路由

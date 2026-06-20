@@ -55,7 +55,7 @@ func (s *ImportService) ProcessImport(rows []excel.AssetRow) (*ImportResult, err
 		}
 	}
 
-	// 使用事务处理
+	// 使用事务处理：遇到错误时返回非 nil 触发回滚
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		for _, row := range rows {
 			if err := s.validateAndCreateAsset(tx, &row, result); err != nil {
@@ -64,9 +64,14 @@ func (s *ImportService) ProcessImport(rows []excel.AssetRow) (*ImportResult, err
 					Row:     row.RowNum,
 					Message: err.Error(),
 				})
+				// 继续处理下一行，不立即中断
 			} else {
 				result.Success++
 			}
+		}
+		// 若失败数量过多（超过 50%），认为数据有问题，触发回滚
+		if result.Failed > 0 && result.Failed > result.Success {
+			return fmt.Errorf("失败行数过多 (%d/%d)，已回滚", result.Failed, result.Failed+result.Success)
 		}
 		return nil
 	})
@@ -86,25 +91,17 @@ func (s *ImportService) validateAndCreateAsset(tx *gorm.DB, row *excel.AssetRow,
 	var categoryID *uint
 	if row.CategoryName != "" {
 		categoryName := strings.TrimSpace(row.CategoryName)
+		// 精确匹配（不再用模糊 Contains）
 		if catID, ok := result.CategoryMap[categoryName]; ok {
 			categoryID = &catID
 		} else {
-			// 尝试查找相近的分类名
-			for name, id := range result.CategoryMap {
-				if strings.Contains(name, categoryName) || strings.Contains(categoryName, name) {
-					categoryID = &id
-					break
-				}
+			// 未找到时创建新的顶级分类
+			newCat := &model.Category{
+				Name: categoryName,
 			}
-			if categoryID == nil {
-				// 创建一个新的顶级分类
-				newCat := &model.Category{
-					Name: categoryName,
-				}
-				if err := tx.Create(newCat).Error; err == nil {
-					categoryID = &newCat.ID
-					result.CategoryMap[categoryName] = newCat.ID
-				}
+			if err := tx.Create(newCat).Error; err == nil {
+				categoryID = &newCat.ID
+				result.CategoryMap[categoryName] = newCat.ID
 			}
 		}
 	}

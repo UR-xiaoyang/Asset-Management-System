@@ -13,6 +13,7 @@ backups/
 
 # Local environment
 .env
+.env.local
 
 # Logs
 *.log

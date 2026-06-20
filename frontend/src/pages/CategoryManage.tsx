@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Tree, Button, Modal, Form, Input, Card, Space, Popconfirm, App, Tag } from 'antd'
+import { Tree, Button, Modal, Form, Input, Card, Space, Popconfirm, App, Tag, Select } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons'
 import { categoryAPI } from '../services/api'
 import type { Category } from '../services/api'
@@ -51,8 +51,9 @@ export default function CategoryManage() {
       await categoryAPI.delete(id)
       antMessage.success('删除成功')
       loadCategories()
-    } catch (error) {
-      antMessage.error('删除失败')
+    } catch (error: any) {
+      // 显示后端返回的具体错误信息（如"该分类下有资产，无法删除"）
+      antMessage.error(error.response?.data?.error || '删除失败')
     }
   }
 
@@ -80,9 +81,12 @@ export default function CategoryManage() {
       }
       setModalVisible(false)
       loadCategories()
-    } catch (error) {
-      antMessage.error('操作失败')
-      setModalVisible(false)  // 失败时也关闭弹窗
+    } catch (error: any) {
+      // 只有非表单校验错误才提示
+      if (!error.errorFields) {
+        antMessage.error(error.response?.data?.error || '操作失败')
+      }
+      // 失败时保持弹窗打开，不调用 setModalVisible(false)
     }
   }
 
@@ -112,6 +116,25 @@ export default function CategoryManage() {
       ),
       children: cat.children ? buildTreeData(cat.children) : undefined,
     }))
+  }
+
+  // 递归渲染分类选项
+  const renderCategoryOptions = (cats: Category[], depth = 0): React.ReactNode[] => {
+    const result: React.ReactNode[] = []
+    cats.forEach(cat => {
+      // 编辑时排除自己及其子节点
+      if (editingCategory && cat.id === editingCategory.id) return
+
+      result.push(
+        <Select.Option key={cat.id} value={cat.id}>
+          {'  '.repeat(depth)}{cat.name}
+        </Select.Option>
+      )
+      if (cat.children && cat.children.length > 0) {
+        result.push(...renderCategoryOptions(cat.children, depth + 1))
+      }
+    })
+    return result
   }
 
   const treeData = buildTreeData(categories)
@@ -188,7 +211,16 @@ export default function CategoryManage() {
             <Input id="category-form-label" placeholder="请输入自定义标签（可选）" />
           </Form.Item>
           <Form.Item name="parent_id" label="父级分类">
-            <Input type="number" placeholder="留空为顶级分类" />
+            <Select
+              id="category-form-parent"
+              placeholder="留空为顶级分类"
+              allowClear
+              showSearch
+              optionFilterProp="children"
+            >
+              <Select.Option value={undefined}>顶级分类</Select.Option>
+              {renderCategoryOptions(categories)}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

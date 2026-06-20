@@ -45,12 +45,21 @@ export default function PrintLabelModal({ open, onClose, assetIds }: PrintLabelM
   const [customHeight, setCustomHeight] = useState<number>(40)
   const [exporting, setExporting] = useState(false)
   const labelRefs = useRef<Map<number, HTMLDivElement>>(new Map())
+  const abortControllerRef = useRef<AbortController | null>(null)
   const { message: antMessage } = App.useApp()
 
   useEffect(() => {
     if (open && assetIds.length > 0) {
       setLabels([])
       loadLabels()
+    }
+
+    return () => {
+      // cleanup: 取消未完成的请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+        abortControllerRef.current = null
+      }
     }
   }, [open, assetIds, selectedPreset])
 
@@ -61,6 +70,14 @@ export default function PrintLabelModal({ open, onClose, assetIds }: PrintLabelM
   }, [labels])
 
   const loadLabels = async () => {
+    // 取消之前的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     setLoading(true)
     try {
       const size = getCurrentSize()
@@ -70,12 +87,20 @@ export default function PrintLabelModal({ open, onClose, assetIds }: PrintLabelM
       } else {
         res = await qrAPI.generateBatch(assetIds)
       }
+
+      // 检查是否已被取消
+      if (controller.signal.aborted) return
+
       setLabels(res.data.items)
     } catch (error) {
+      if (controller.signal.aborted) return
       console.error('Failed to load labels:', error)
       setLabels([])
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) {
+        setLoading(false)
+      }
+      abortControllerRef.current = null
     }
   }
 

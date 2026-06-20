@@ -56,24 +56,21 @@ export default function ConsumptionList() {
     }
   }
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selectedRecord || !rejectReason) {
       antMessage.warning('请输入拒绝原因')
-      return false
+      return
     }
-    return (async () => {
-      try {
-        await consumptionAPI.reject(selectedRecord.id, rejectReason)
-        antMessage.success('已拒绝')
-        setRejectModalVisible(false)
-        setRejectReason('')
-        loadRecords()
-        return true
-      } catch (error) {
-        antMessage.error('操作失败')
-        return false
-      }
-    })()
+    try {
+      await consumptionAPI.reject(selectedRecord.id, rejectReason)
+      antMessage.success('已拒绝')
+      setRejectModalVisible(false)
+      setRejectReason('')
+      loadRecords()
+    } catch (error) {
+      antMessage.error('操作失败')
+      // 失败时保持弹窗打开
+    }
   }
 
   const handleComplete = async (values: { actual_quantity: number; project_record: string; remark?: string }) => {
@@ -91,6 +88,7 @@ export default function ConsumptionList() {
       loadRecords()
     } catch (error: any) {
       antMessage.error(error.response?.data?.error || '操作失败')
+      // 失败时保持弹窗打开
     } finally {
       setSubmitLoading(false)
     }
@@ -167,7 +165,7 @@ export default function ConsumptionList() {
       loadRecords()
     } catch (error: any) {
       antMessage.error(error.response?.data?.error || '提交失败')
-      closeCreateModal()
+      // 失败时保持弹窗打开
     } finally {
       setSubmitLoading(false)
     }

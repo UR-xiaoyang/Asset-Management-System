@@ -52,8 +52,12 @@ func InitDB(dbPath string) error {
 
 	// 打开数据库
 	var err error
+	logLevel := logger.Info
+	if os.Getenv("LOG_LEVEL") == "prod" || os.Getenv("GIN_MODE") == "release" {
+		logLevel = logger.Warn
+	}
 	DB, err = gorm.Open(dialector, &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logLevel),
 	})
 	if err != nil {
 		return err
@@ -72,7 +76,43 @@ func InitDB(dbPath string) error {
 		return err
 	}
 
+	// SQLite 必须显式启用外键；其他方言不需此设置
+	if dbType == "sqlite" {
+		if err := DB.Exec("PRAGMA foreign_keys=ON").Error; err != nil {
+			return fmt.Errorf("启用外键失败: %w", err)
+		}
+		log.Println("SQLite 外键约束已启用")
+	}
+
+	// 启动时数据完整性预检（仅 SQLite 适用）
+	if dbType == "sqlite" {
+		if err := validateDataIntegrity(); err != nil {
+			return err
+		}
+	}
+
 	log.Printf("数据库初始化完成，类型: %s", dbType)
+	return nil
+}
+
+// validateDataIntegrity 启动时检测重复分类等数据问题
+func validateDataIntegrity() error {
+	type dupKey struct {
+		ParentID *uint
+		Name     string
+		Count    int
+	}
+	var dups []dupKey
+	if err := DB.Model(&Category{}).
+		Select("parent_id, name, COUNT(*) as count").
+		Group("parent_id, name").
+		Having("COUNT(*) > 1").
+		Scan(&dups).Error; err != nil {
+		return fmt.Errorf("数据完整性检查失败: %w", err)
+	}
+	if len(dups) > 0 {
+		return fmt.Errorf("发现 %d 组重复分类（parent_id, name），请先手动合并后再启动", len(dups))
+	}
 	return nil
 }
 

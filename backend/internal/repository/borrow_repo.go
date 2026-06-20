@@ -56,29 +56,65 @@ func (r *BorrowRepository) GetPending() ([]model.BorrowRecord, error) {
 
 func (r *BorrowRepository) Approve(id uint, approvedBy string) error {
 	now := time.Now()
-	return r.db.Model(&model.BorrowRecord{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"status":      model.BorrowStatusApproved,
-		"approved_by": approvedBy,
-		"approved_at": &now,
-	}).Error
+	// CAS：仅当 status 仍为 pending 时才更新为 approved
+	return r.db.Model(&model.BorrowRecord{}).
+		Where("id = ? AND status = ?", id, model.BorrowStatusPending).
+		Updates(map[string]interface{}{
+			"status":      model.BorrowStatusApproved,
+			"approved_by": approvedBy,
+			"approved_at": &now,
+		}).Error
 }
 
 func (r *BorrowRepository) Reject(id uint, approvedBy string, reason string) error {
 	now := time.Now()
-	return r.db.Model(&model.BorrowRecord{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"status":        model.BorrowStatusRejected,
-		"approved_by":   approvedBy,
-		"approved_at":   &now,
-		"reject_reason": reason,
-	}).Error
+	// CAS：仅当 status 仍为 pending 时才更新为 rejected
+	return r.db.Model(&model.BorrowRecord{}).
+		Where("id = ? AND status = ?", id, model.BorrowStatusPending).
+		Updates(map[string]interface{}{
+			"status":        model.BorrowStatusRejected,
+			"approved_by":   approvedBy,
+			"approved_at":   &now,
+			"reject_reason": reason,
+		}).Error
 }
 
 func (r *BorrowRepository) Return(id uint) error {
 	now := time.Now()
-	return r.db.Model(&model.BorrowRecord{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"status":      model.BorrowStatusReturned,
-		"return_date": &now,
-	}).Error
+	// CAS：仅当 status 为 approved 时才标记为 returned
+	return r.db.Model(&model.BorrowRecord{}).
+		Where("id = ? AND status = ?", id, model.BorrowStatusApproved).
+		Updates(map[string]interface{}{
+			"status":      model.BorrowStatusReturned,
+			"return_date": &now,
+		}).Error
+}
+
+// Revoke 撤销借用（管理员撤回/审批拒绝后由用户撤销）
+func (r *BorrowRepository) Revoke(id uint, revokedBy string) error {
+	now := time.Now()
+	// 仅当 status 为 pending/approved 时才能撤销；approved 时需先归还库存（在 service 层处理）
+	return r.db.Model(&model.BorrowRecord{}).
+		Where("id = ? AND status IN ?", id, []model.BorrowStatus{
+			model.BorrowStatusPending, model.BorrowStatusApproved,
+		}).
+		Updates(map[string]interface{}{
+			"status":     model.BorrowStatusRevoked,
+			"revoked_at": &now,
+			"revoked_by": revokedBy,
+		}).Error
+}
+
+// CountActiveByUUID 统计某资产当前活跃借用数量（pending/approved）
+func (r *BorrowRepository) CountActiveByUUID(uuid string) (int, error) {
+	var total int64
+	err := r.db.Model(&model.BorrowRecord{}).
+		Where("asset_uuid = ? AND status IN ?", uuid, []model.BorrowStatus{
+			model.BorrowStatusPending, model.BorrowStatusApproved,
+		}).
+		Select("COALESCE(SUM(quantity), 0)").
+		Scan(&total).Error
+	return int(total), err
 }
 
 func (r *BorrowRepository) Delete(id uint) error {
@@ -111,4 +147,33 @@ func (r *BorrowRepository) GetByBorrowerName(borrowerName string) ([]model.Borro
 	var records []model.BorrowRecord
 	err := r.db.Preload("Asset").Where("borrower_name = ?", borrowerName).Order("created_at DESC").Find(&records).Error
 	return records, err
+}
+
+// GetBorrowedQuantitiesByUUIDs 批量查询多个资产的已借数量（解决 N+1）
+//   - 返回 map[uuid]int，缺失的 uuid 默认 0
+//   - 仅统计 pending/approved 状态
+func (r *BorrowRepository) GetBorrowedQuantitiesByUUIDs(uuids []string) (map[string]int, error) {
+	type row struct {
+		AssetUUID string
+		Total     int64
+	}
+	result := make(map[string]int, len(uuids))
+	if len(uuids) == 0 {
+		return result, nil
+	}
+	var rows []row
+	err := r.db.Model(&model.BorrowRecord{}).
+		Select("asset_uuid, COALESCE(SUM(quantity),0) as total").
+		Where("asset_uuid IN ? AND status IN ?", uuids, []model.BorrowStatus{
+			model.BorrowStatusPending, model.BorrowStatusApproved,
+		}).
+		Group("asset_uuid").
+		Scan(&rows).Error
+	if err != nil {
+		return result, err
+	}
+	for _, r := range rows {
+		result[r.AssetUUID] = int(r.Total)
+	}
+	return result, nil
 }

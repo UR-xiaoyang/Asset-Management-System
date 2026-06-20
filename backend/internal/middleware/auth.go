@@ -18,15 +18,20 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-var JWTSecret = []byte(getJWTSecret())
+// JWTSecret JWT 签名密钥（启动时由 main.go 通过 RequireJWTSecret 注入）
+var JWTSecret []byte
 
-// getJWTSecret 获取JWT密钥，优先从环境变量读取
-func getJWTSecret() string {
-	secret := os.Getenv("JWT_SECRET")
-	if secret != "" {
-		return secret
+// MustInitJWTSecret 启动时强制要求 JWT_SECRET 环境变量。
+// 缺失时直接 panic，避免使用硬编码默认值带来的安全风险。
+func MustInitJWTSecret() {
+	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if secret == "" {
+		panic("JWT_SECRET 环境变量未设置；生产环境禁止使用默认密钥，请在 .env 或部署环境中配置长度≥32 的随机字符串")
 	}
-	return "lab-asset-manager-jwt-secret-CHANGE-THIS-IN-PRODUCTION-32bytes!"
+	if len(secret) < 32 {
+		panic("JWT_SECRET 长度不足 32 字符，请使用更强的密钥")
+	}
+	JWTSecret = []byte(secret)
 }
 
 // GenerateToken 生成 JWT token

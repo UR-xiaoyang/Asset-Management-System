@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/smtp"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -20,7 +21,13 @@ type EmailService struct {
 
 func NewEmailService() *EmailService {
 	host := os.Getenv("SMTP_HOST")
-	port := 587
+	portStr := os.Getenv("SMTP_PORT")
+	port := 587 // 默认
+	if portStr != "" {
+		if p, err := strconv.Atoi(portStr); err == nil && p > 0 && p < 65536 {
+			port = p
+		}
+	}
 	username := os.Getenv("SMTP_USER")
 	password := os.Getenv("SMTP_PASS")
 	from := os.Getenv("SMTP_FROM")

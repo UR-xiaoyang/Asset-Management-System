@@ -6,12 +6,14 @@ import (
 )
 
 type CategoryService struct {
-	repo *repository.CategoryRepository
+	repo      *repository.CategoryRepository
+	assetRepo *repository.AssetRepository
 }
 
 func NewCategoryService() *CategoryService {
 	return &CategoryService{
-		repo: repository.NewCategoryRepository(),
+		repo:      repository.NewCategoryRepository(),
+		assetRepo: repository.NewAssetRepository(),
 	}
 }
 
@@ -70,6 +72,22 @@ func (s *CategoryService) Update(id uint, req *UpdateCategoryReq) (*model.Catego
 }
 
 func (s *CategoryService) Delete(id uint) error {
+	// 检查是否有子分类
+	hasChildren, err := s.repo.HasChildren(id)
+	if err != nil {
+		return err
+	}
+	if hasChildren {
+		return ErrCategoryInUse
+	}
+	// 检查是否有资产引用
+	count, err := s.assetRepo.CountByCategory(id)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return ErrCategoryInUse
+	}
 	return s.repo.Delete(id)
 }
 

@@ -18,6 +18,9 @@ import (
 )
 
 func main() {
+	// 强制要求 JWT_SECRET 配置（无 fallback）
+	middleware.MustInitJWTSecret()
+
 	// 初始化数据库
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
@@ -100,7 +103,7 @@ func main() {
 	authPublic.Use(middleware.RateLimitMiddleware(10, time.Minute)) // 每分钟最多10次尝试
 	authHandler.RegisterPublicRoutes(authPublic)
 
-	// 需要认证的路由组
+	// 需要认证的路由组（所有已登录用户）
 	apiAuth := api.Group("")
 	apiAuth.Use(middleware.AuthRequired())
 	{
@@ -138,10 +141,35 @@ func main() {
 		// 系统设置
 		settingHandler := handler.NewSettingHandler()
 		settingHandler.RegisterRoutes(apiAuth)
+	}
 
-		// 系统初始化
+	// 公开路由：系统初始化状态（无需认证，用于前端判断是否跳转到 /setup）
+	setupHandler := handler.NewSetupHandler()
+	setupHandler.RegisterRoutes(api.Group(""))
+
+	// 需要管理员权限的路由组（admin + super_admin）
+	apiAdmin := api.Group("")
+	apiAdmin.Use(middleware.AuthRequired(), middleware.AdminRequired())
+	{
+		// auth.Register 需要管理员权限
+		authHandler.RegisterAdminRoutes(apiAdmin.Group("/auth"))
+
+		// 借用记录删除需要管理员
+		borrowHandler := handler.NewBorrowHandler()
+		borrowHandler.RegisterAdminRoutes(apiAdmin)
+
+		// 损耗记录删除需要管理员
+		consumptionHandler := handler.NewConsumptionHandler()
+		consumptionHandler.RegisterAdminRoutes(apiAdmin)
+	}
+
+	// 需要超级管理员权限的路由组（仅 super_admin）
+	apiSuperAdmin := api.Group("")
+	apiSuperAdmin.Use(middleware.AuthRequired(), middleware.SuperAdminRequired())
+	{
+		// 系统初始化/重置仅超级管理员
 		setupHandler := handler.NewSetupHandler()
-		setupHandler.RegisterRoutes(apiAuth)
+		setupHandler.RegisterSuperAdminRoutes(apiSuperAdmin)
 	}
 
 	registerStaticRoutes(r)

@@ -41,9 +41,19 @@ func (r *CategoryRepository) Update(category *model.Category) error {
 }
 
 func (r *CategoryRepository) Delete(id uint) error {
+	// 软删除：配合 model.Category 上的 gorm.DeletedAt 自动过滤已删记录
 	return r.db.Delete(&model.Category{}, id).Error
 }
 
 func (r *CategoryRepository) DeleteBatch(ids []uint) error {
 	return r.db.Delete(&model.Category{}, "id IN ?", ids).Error
+}
+
+// HasChildren 检查是否有子分类
+func (r *CategoryRepository) HasChildren(parentID uint) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.Category{}).
+		Where("parent_id = ?", parentID).
+		Count(&count).Error
+	return count > 0, err
 }

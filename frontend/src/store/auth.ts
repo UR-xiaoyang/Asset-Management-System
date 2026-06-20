@@ -18,6 +18,7 @@ interface AuthState {
   hasHydrated: boolean
   login: (token: string, user: User) => void
   logout: () => void
+  updateUser: (userData: Partial<User>) => void
   setHasHydrated: (state: boolean) => void
 }
 
@@ -33,7 +34,10 @@ export const useAuthStore = create<AuthState>()(
         // 确保 hasHydrated 为 true（登录后不需要等待 hydration）
         set({ hasHydrated: true })
       },
-      logout: () => set({ token: null, user: null, isAuthenticated: false }),
+      logout: () => set({ token: null, user: null, isAuthenticated: false, hasHydrated: true }),
+      updateUser: (userData) => set((state) => ({
+        user: state.user ? { ...state.user, ...userData } : null
+      })),
       setHasHydrated: (state) => set({ hasHydrated: state }),
     }),
     {

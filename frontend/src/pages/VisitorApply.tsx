@@ -16,7 +16,7 @@ export default function VisitorApply() {
   const [form] = Form.useForm()
   const { message: antMessage } = App.useApp()
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
+  const { user, logout, updateUser } = useAuthStore()
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [categoryId, setCategoryId] = useState<number | undefined>()
@@ -53,7 +53,7 @@ export default function VisitorApply() {
 
   useEffect(() => {
     loadAssets()
-  }, [page, categoryId])
+  }, [page, categoryId, searchText])
 
   const handleLogout = () => {
     logout()
@@ -73,6 +73,11 @@ export default function VisitorApply() {
       const values = await profileForm.validateFields()
       setProfileSubmitting(true)
       await userAPI.update(user!.id, {
+        email: values.email,
+        phone: values.phone,
+      })
+      // 更新成功后同步到 store
+      updateUser({
         email: values.email,
         phone: values.phone,
       })

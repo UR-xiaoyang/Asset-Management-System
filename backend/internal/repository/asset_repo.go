@@ -62,3 +62,29 @@ func (r *AssetRepository) DeleteBatch(ids []uint) error {
 func (r *AssetRepository) UpdateBatch(ids []uint, updates map[string]interface{}) error {
 	return r.db.Model(&model.Asset{}).Where("id IN ?", ids).Updates(updates).Error
 }
+
+// DecreaseQuantity 原子扣减库存；返回 rows affected
+//   - 仅当 quantity >= n 时才扣减（避免负数）
+//   - rows affected = 0 表示库存不足或资产不存在
+func (r *AssetRepository) DecreaseQuantity(uuid string, n int) (int64, error) {
+	res := r.db.Model(&model.Asset{}).
+		Where("uuid = ? AND quantity >= ?", uuid, n).
+		UpdateColumn("quantity", gorm.Expr("quantity - ?", n))
+	return res.RowsAffected, res.Error
+}
+
+// IncreaseQuantity 原子加回库存
+func (r *AssetRepository) IncreaseQuantity(uuid string, n int) error {
+	return r.db.Model(&model.Asset{}).
+		Where("uuid = ?", uuid).
+		UpdateColumn("quantity", gorm.Expr("quantity + ?", n)).Error
+}
+
+// CountByCategory 统计引用某分类的资产数量（用于删除前检查）
+func (r *AssetRepository) CountByCategory(categoryID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&model.Asset{}).
+		Where("category_id = ?", categoryID).
+		Count(&count).Error
+	return count, err
+}

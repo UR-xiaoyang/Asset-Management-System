@@ -127,8 +127,9 @@ export default function UserManage() {
       const isValidationError = (err as unknown as { errorFields?: unknown }).errorFields
       if (!isValidationError) {
         message.error(err.response?.data?.error || '操作失败')
-        setModalVisible(false)
       }
+      // 仅当非表单校验错误时才关闭弹窗
+      // 表单校验错误时保持弹窗打开，让用户修正
     } finally {
       setSubmitting(false)
     }

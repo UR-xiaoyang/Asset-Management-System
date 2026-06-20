@@ -29,7 +29,7 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 
 	category, err := h.svc.Create(&req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建分类失败"})
 		return
 	}
 	c.JSON(http.StatusCreated, category)
@@ -55,7 +55,7 @@ func (h *CategoryHandler) Get(c *gin.Context) {
 func (h *CategoryHandler) List(c *gin.Context) {
 	categories, err := h.svc.GetAll()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取分类列表失败"})
 		return
 	}
 	c.JSON(http.StatusOK, categories)
@@ -65,7 +65,7 @@ func (h *CategoryHandler) List(c *gin.Context) {
 func (h *CategoryHandler) GetTree(c *gin.Context) {
 	tree, err := h.svc.GetTree()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取分类树失败"})
 		return
 	}
 	c.JSON(http.StatusOK, tree)
@@ -87,7 +87,7 @@ func (h *CategoryHandler) Update(c *gin.Context) {
 
 	category, err := h.svc.Update(uint(id), &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新分类失败"})
 		return
 	}
 	c.JSON(http.StatusOK, category)
@@ -102,7 +102,8 @@ func (h *CategoryHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.svc.Delete(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 保留业务错误信息（如"该分类下有资产"）
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "deleted"})

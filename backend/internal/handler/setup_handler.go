@@ -125,7 +125,12 @@ func (h *SetupHandler) RegisterRoutes(r *gin.RouterGroup) {
 	setup := r.Group("/setup")
 	{
 		setup.GET("/status", h.GetStatus)
-		setup.POST("/init", h.Init)
-		setup.POST("/reset", h.Reset)
+		// Init/Reset 由 main.go 在 apiSuperAdmin 组注册（需 SuperAdminRequired 中间件）
 	}
+}
+
+// RegisterSuperAdminRoutes 注册超级管理员路由（需 SuperAdminRequired 中间件）
+func (h *SetupHandler) RegisterSuperAdminRoutes(r *gin.RouterGroup) {
+	r.POST("/setup/init", h.Init)
+	r.POST("/setup/reset", h.Reset)
 }

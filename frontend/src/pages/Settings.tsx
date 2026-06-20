@@ -13,7 +13,8 @@ interface SystemSetting {
 export default function Settings() {
   const [systemForm] = Form.useForm()
   const [emailForm] = Form.useForm()
-  const [loading, setLoading] = useState(false)
+  const [systemLoading, setSystemLoading] = useState(false)
+  const [emailLoading, setEmailLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const { message: antMessage } = App.useApp()
 
@@ -48,26 +49,26 @@ export default function Settings() {
   const handleSystemSave = async () => {
     try {
       const values = await systemForm.validateFields()
-      setLoading(true)
+      setSystemLoading(true)
       await api.put('/settings', { settings: values })
       antMessage.success('系统设置已保存')
     } catch (error: any) {
       antMessage.error(error.response?.data?.error || '保存失败')
     } finally {
-      setLoading(false)
+      setSystemLoading(false)
     }
   }
 
   const handleEmailSave = async () => {
     try {
       const values = await emailForm.validateFields()
-      setLoading(true)
+      setEmailLoading(true)
       await api.put('/settings', { settings: values })
       antMessage.success('邮件设置已保存')
     } catch (error: any) {
       antMessage.error(error.response?.data?.error || '保存失败')
     } finally {
-      setLoading(false)
+      setEmailLoading(false)
     }
   }
 
@@ -84,7 +85,7 @@ export default function Settings() {
             <Input placeholder="请输入实验室名称" maxLength={100} />
           </Form.Item>
           <Form.Item style={{ marginTop: 24 }}>
-            <Button type="primary" onClick={handleSystemSave} loading={loading}>
+            <Button type="primary" onClick={handleSystemSave} loading={systemLoading}>
               保存设置
             </Button>
           </Form.Item>
@@ -121,7 +122,7 @@ export default function Settings() {
             <Switch />
           </Form.Item>
           <Form.Item style={{ marginTop: 24 }}>
-            <Button type="primary" onClick={handleEmailSave} loading={loading}>
+            <Button type="primary" onClick={handleEmailSave} loading={emailLoading}>
               保存设置
             </Button>
           </Form.Item>

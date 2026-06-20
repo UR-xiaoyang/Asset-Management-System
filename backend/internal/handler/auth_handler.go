@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"net/mail"
 	"time"
 
 	"lab-asset-manager/internal/middleware"
@@ -66,7 +67,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
-// Register 注册（需超级管理员权限）
+// Register 注册（需管理员权限，路由层已加 AdminRequired 中间件）
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`
@@ -79,15 +80,27 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// 邮箱格式校验（若提供）
+	if req.Email != "" {
+		if _, err := mail.ParseAddress(req.Email); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "邮箱格式不正确"})
+			return
+		}
+	}
+
 	// 检查用户名是否已存在
 	if _, err := h.userRepo.GetByUsername(req.Username); err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "用户名已存在"})
 		return
 	}
 
+	// 角色白名单：仅允许创建 admin/super_admin（visitor 通过公开接口注册）
 	role := model.RoleAdmin
 	if req.Role == "super_admin" {
 		role = model.RoleSuperAdmin
+	} else if req.Role == "visitor" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不允许通过此接口创建 visitor，请使用 /auth/visitor-register"})
+		return
 	}
 
 	user := &model.User{
@@ -227,7 +240,11 @@ func (h *AuthHandler) RegisterPublicRoutes(r *gin.RouterGroup) {
 func (h *AuthHandler) RegisterProtectedRoutes(r *gin.RouterGroup) {
 	auth := r.Group("/auth")
 	{
-		auth.POST("/register", h.Register)
 		auth.GET("/me", h.GetCurrentUser)
 	}
+}
+
+// RegisterAdminRoutes 注册管理员路由（需 AdminRequired 中间件）
+func (h *AuthHandler) RegisterAdminRoutes(r *gin.RouterGroup) {
+	r.POST("/register", h.Register)
 }

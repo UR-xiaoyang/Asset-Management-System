@@ -51,7 +51,13 @@
       "mcp__chrome-devtools__wait_for",
       "mcp__chrome-devtools__list_network_requests",
       "mcp__chrome-devtools__list_console_messages",
-      "Bash(sqlite3 *)"
+      "Bash(sqlite3 *)",
+      "Bash(ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new root@38.12.6.102 \"echo 'SSH连接成功'; uname -a; whoami\")",
+      "Bash(ssh *)",
+      "Bash(getent hosts *)",
+      "Bash(rsync *)",
+      "Bash(scp /home/xiaoyang/project/实验室资产管理/backend/cmd/server/main.go root@38.12.6.102:/opt/lab-asset-manager/backend/cmd/server/main.go)",
+      "Bash(git add *)"
     ]
   }
 }
